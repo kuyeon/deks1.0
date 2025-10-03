@@ -15,7 +15,7 @@ ESP32 S3 ←→ Socket ←→ WebSocket Bridge ←→ WebSocket ←→ FastAPI �
 - **인코딩**: UTF-8
 
 ### 2. Socket Bridge ↔ FastAPI (WebSocket)
-- **포트**: 8001 (WebSocket Bridge)
+- **포트**: 8002 (WebSocket Bridge)
 - **프로토콜**: WebSocket
 - **데이터 형식**: JSON
 
@@ -290,6 +290,83 @@ Content-Type: application/json
 }
 ```
 
+#### 자연어 명령 파싱
+```http
+POST /api/v1/parse-command
+Content-Type: application/json
+
+{
+  "message": "오른쪽으로 돌아줘",
+  "user_id": "user_001",
+  "session_id": "session_123"
+}
+```
+
+**응답 (성공):**
+```json
+{
+  "command_id": "cmd_456",
+  "action": "turn_right",
+  "confidence": 0.95,
+  "response": "오른쪽으로 회전합니다!",
+  "parameters": {
+    "angle": 90,
+    "speed": 50
+  },
+  "timestamp": "2024-01-01T12:00:00Z"
+}
+```
+
+**응답 (실패):**
+```json
+{
+  "command_id": "cmd_457",
+  "action": "unknown",
+  "confidence": 0.0,
+  "response": "이해하지 못했습니다. 다시 말씀해 주세요.",
+  "suggestions": [
+    "앞으로 가줘",
+    "왼쪽으로 돌아줘",
+    "정지해줘"
+  ],
+  "timestamp": "2024-01-01T12:00:00Z"
+}
+```
+
+#### 지원 명령어 목록 조회
+```http
+GET /api/v1/commands/supported
+```
+
+**응답:**
+```json
+{
+  "commands": {
+    "move_forward": {
+      "keywords": ["앞으로", "전진", "가줘", "이동해"],
+      "description": "로봇을 앞으로 이동시킵니다"
+    },
+    "turn_left": {
+      "keywords": ["왼쪽", "좌회전", "왼쪽으로"],
+      "description": "로봇을 왼쪽으로 회전시킵니다"
+    },
+    "turn_right": {
+      "keywords": ["오른쪽", "우회전", "오른쪽으로"],
+      "description": "로봇을 오른쪽으로 회전시킵니다"
+    },
+    "stop": {
+      "keywords": ["정지", "멈춰", "그만"],
+      "description": "로봇을 정지시킵니다"
+    },
+    "spin": {
+      "keywords": ["빙글빙글", "돌아", "회전해"],
+      "description": "로봇을 제자리에서 회전시킵니다"
+    }
+  },
+  "timestamp": "2024-01-01T12:00:00Z"
+}
+```
+
 ## 🔄 실시간 데이터 스트림
 
 ### WebSocket 이벤트
@@ -344,6 +421,57 @@ Content-Type: application/json
 }
 ```
 
+#### 자연어 명령 파싱 결과
+```json
+{
+  "event": "command_parsed",
+  "data": {
+    "user_id": "user_001",
+    "original_message": "앞으로 가줘",
+    "parsed_command": {
+      "action": "move_forward",
+      "confidence": 0.95,
+      "parameters": {
+        "speed": 50
+      }
+    },
+    "response": "앞으로 이동합니다!",
+    "timestamp": "2024-01-01T12:00:00Z"
+  }
+}
+```
+
+#### 자연어 파싱 실패
+```json
+{
+  "event": "command_parse_failed",
+  "data": {
+    "user_id": "user_001",
+    "original_message": "어쩌고 저쩌고",
+    "error": "명령을 이해하지 못했습니다",
+    "suggestions": [
+      "앞으로 가줘",
+      "왼쪽으로 돌아줘",
+      "정지해줘"
+    ],
+    "timestamp": "2024-01-01T12:00:00Z"
+  }
+}
+```
+
+#### 채팅 메시지
+```json
+{
+  "event": "chat_message",
+  "data": {
+    "user_id": "user_001",
+    "message": "안녕 Deks!",
+    "response": "안녕하세요! 무엇을 도와드릴까요?",
+    "timestamp": "2024-01-01T12:00:00Z"
+  }
+}
+```
+
 ## 🛡️ 에러 처리
 
 ### 에러 메시지 형식
@@ -353,10 +481,41 @@ Content-Type: application/json
   "robot_id": "deks_001",
   "timestamp": "2024-01-01T12:00:00Z",
   "data": {
-    "error_code": "SENSOR_FAILURE|MOTOR_ERROR|COMMUNICATION_ERROR",
+    "error_code": "SENSOR_FAILURE|MOTOR_ERROR|COMMUNICATION_ERROR|NLP_PARSE_ERROR|NLP_UNKNOWN_COMMAND",
     "error_message": "적외선 센서 오류",
     "severity": "warning|error|critical",
     "recovery_action": "자동 재시도|수동 점검 필요"
+  }
+}
+```
+
+### 자연어 처리 에러 예시
+```json
+{
+  "type": "error",
+  "robot_id": "deks_001",
+  "timestamp": "2024-01-01T12:00:00Z",
+  "data": {
+    "error_code": "NLP_UNKNOWN_COMMAND",
+    "error_message": "지원하지 않는 명령어입니다",
+    "severity": "warning",
+    "recovery_action": "명령어 목록 조회 권장",
+    "original_input": "어쩌고 저쩌고",
+    "suggestions": ["앞으로 가줘", "정지해줘"]
+  }
+}
+```
+
+```json
+{
+  "type": "error",
+  "robot_id": "deks_001",
+  "timestamp": "2024-01-01T12:00:00Z",
+  "data": {
+    "error_code": "NLP_PARSE_ERROR",
+    "error_message": "자연어 파싱 중 오류 발생",
+    "severity": "error",
+    "recovery_action": "다시 시도 또는 수동 제어 사용"
   }
 }
 ```
