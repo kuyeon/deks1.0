@@ -14,7 +14,7 @@
 **1.0** 🤖
 
 </div>
-
+<div align="center">
 **책상 위의 작은 친구가 되어주는 스마트 로봇**
 
 [![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)](http://unlicense.org/)
