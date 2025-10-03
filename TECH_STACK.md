@@ -6,7 +6,7 @@
 - **machine** - GPIO, PWM, ADC 제어
 - **time** - 타이밍 제어
 - **network** - Wi-Fi 연결
-- **socket** - 소켓 통신
+- **socket** - TCP 클라이언트 소켓 통신
 - **json** - JSON 데이터 처리
 - **uasyncio** - 비동기 프로그래밍
 

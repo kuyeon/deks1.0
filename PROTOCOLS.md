@@ -27,7 +27,7 @@ ESP32 S3 ←→ TCP Socket ←→ FastAPI Server (Socket Bridge 통합) ←→ W
 # ESP32에서 연결
 import socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect(('192.168.1.100', 8080))
+sock.connect(('192.168.1.100', 8888))
 ```
 
 ### 메시지 형식
