@@ -3,31 +3,35 @@
 ## 🌐 전체 통신 구조
 
 ```
-ESP32 S3 ←→ TCP Socket ←→ FastAPI Server (Socket Bridge 통합) ←→ Web Browser
+ESP32 S3 ←→ Socket ←→ WebSocket Bridge ←→ WebSocket ←→ FastAPI ←→ Web Browser
 ```
 
 ## 📡 프로토콜 계층
 
-### 1. ESP32 ↔ FastAPI Server (TCP Socket)
-- **포트**: 8888 (ESP32 연결용)
+### 1. ESP32 ↔ Socket Bridge (Raw Socket)
+- **포트**: 8080
 - **프로토콜**: TCP Socket
 - **데이터 형식**: JSON 문자열
 - **인코딩**: UTF-8
-- **모듈**: FastAPI 내 Socket Bridge 모듈
 
-### 2. FastAPI ↔ Web Browser (HTTP/WebSocket)
+### 2. Socket Bridge ↔ FastAPI (WebSocket)
+- **포트**: 8002 (WebSocket Bridge)
+- **프로토콜**: WebSocket
+- **데이터 형식**: JSON
+
+### 3. FastAPI ↔ Web Browser (HTTP/WebSocket)
 - **포트**: 8000 (HTTP), 8001 (WebSocket)
 - **프로토콜**: HTTP REST API + WebSocket
 - **데이터 형식**: JSON
 
-## 🔌 ESP32 ↔ FastAPI Server 통신
+## 🔌 ESP32 ↔ Socket Bridge 통신
 
 ### 연결 설정
 ```python
 # ESP32에서 연결
 import socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect(('192.168.1.100', 8888))
+sock.connect(('192.168.1.100', 8080))
 ```
 
 ### 메시지 형식
