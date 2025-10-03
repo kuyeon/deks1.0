@@ -28,9 +28,10 @@
 
 ## 🔌 통신 및 브리지
 
-- **HTTP 클라이언트** - ESP32 ↔ Socket Bridge 통신
+- **HTTP 클라이언트** - ESP32 ↔ FastAPI Server 통신
 - **Socket 클라이언트** - ESP32에서 실시간 데이터 전송
-- **WebSocket 클라이언트** - Socket Bridge ↔ FastAPI
+- **Socket Bridge 모듈** - FastAPI 내 ESP32 통신 모듈
+- **WebSocket 서버** - FastAPI 내 실시간 통신
 - **JSON 직렬화/역직렬화** - 데이터 포맷 변환
 
 ## 🧠 제어 알고리즘
