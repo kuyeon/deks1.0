@@ -68,9 +68,60 @@ command_patterns = {
 
 ## 📊 데이터 처리
 
+### 사용자 경험 향상용 DB
+- **SQLite** - 사용자 패턴 학습 및 개인화 (권장)
+- **Redis** - 실시간 성능 향상 (선택사항)
+- **PostgreSQL** - 클라우드 확장 (향후 계획)
+
+### UX 향상 기능
+- **명령어 학습**: 자주 사용하는 명령어 자동완성
+- **스마트 제안**: 상황별 맞춤 제안
+- **에러 분석**: 실패 패턴 학습 및 개선
+- **감정 추적**: 사용자 만족도 기반 개성 발달
+
+### 데이터 분석 도구
 - **NumPy** (선택사항) - 수치 계산
 - **Pandas** (선택사항) - 센서 데이터 분석
 - **Matplotlib** (선택사항) - 매핑 데이터 시각화
+
+### SQLite 스키마
+```sql
+-- 사용자 상호작용 테이블
+CREATE TABLE user_interactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    command TEXT NOT NULL,
+    response TEXT,
+    success BOOLEAN,
+    user_id TEXT DEFAULT 'default_user',
+    session_id TEXT
+);
+
+-- 명령어 빈도 테이블
+CREATE TABLE command_frequency (
+    command TEXT PRIMARY KEY,
+    count INTEGER DEFAULT 1,
+    last_used DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 에러 패턴 테이블
+CREATE TABLE error_patterns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    failed_command TEXT,
+    error_type TEXT,
+    user_id TEXT
+);
+
+-- 감정 반응 테이블
+CREATE TABLE emotion_responses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    emotion TEXT,
+    trigger_command TEXT,
+    user_satisfaction INTEGER CHECK(user_satisfaction >= 1 AND user_satisfaction <= 5)
+);
+```
 
 ## 🔧 개발 도구
 

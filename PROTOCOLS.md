@@ -367,6 +367,129 @@ GET /api/v1/commands/supported
 }
 ```
 
+### 사용자 경험 향상 API
+
+#### 사용자 패턴 분석
+```http
+GET /api/v1/analytics/user-patterns?user_id=user_001&days=7
+```
+
+**응답:**
+```json
+{
+  "user_id": "user_001",
+  "analysis_period": "7_days",
+  "frequent_commands": [
+    {
+      "command": "앞으로 가줘",
+      "frequency": 15,
+      "success_rate": 0.93
+    },
+    {
+      "command": "오른쪽으로 돌아",
+      "frequency": 8,
+      "success_rate": 0.87
+    }
+  ],
+  "preferred_time_slots": ["morning", "evening"],
+  "common_error_patterns": [
+    {
+      "error_type": "unknown_command",
+      "frequency": 3,
+      "suggestions": ["앞으로 가줘", "정지해줘"]
+    }
+  ],
+  "timestamp": "2024-01-01T12:00:00Z"
+}
+```
+
+#### 스마트 제안 조회
+```http
+GET /api/v1/suggestions/smart?context=idle&user_id=user_001
+```
+
+**응답:**
+```json
+{
+  "context": "idle",
+  "user_id": "user_001",
+  "suggestions": [
+    {
+      "command": "앞으로 가줘",
+      "confidence": 0.85,
+      "reason": "자주 사용하는 명령어",
+      "time_based": true
+    },
+    {
+      "command": "빙글빙글 돌아",
+      "confidence": 0.72,
+      "reason": "시간대별 선호 패턴",
+      "time_based": true
+    }
+  ],
+  "timestamp": "2024-01-01T12:00:00Z"
+}
+```
+
+#### 사용자 만족도 평가
+```http
+POST /api/v1/feedback/satisfaction
+Content-Type: application/json
+
+{
+  "command_id": "cmd_123",
+  "user_satisfaction": 4,
+  "emotion": "happy",
+  "feedback": "정말 잘 작동해요!"
+}
+```
+
+**응답:**
+```json
+{
+  "feedback_id": "fb_456",
+  "status": "recorded",
+  "message": "피드백이 저장되었습니다",
+  "timestamp": "2024-01-01T12:00:00Z"
+}
+```
+
+#### 명령어 학습 데이터 조회
+```http
+GET /api/v1/learning/command-frequency
+```
+
+**응답:**
+```json
+{
+  "global_statistics": {
+    "total_commands": 1250,
+    "success_rate": 0.89,
+    "most_popular": "앞으로 가줘"
+  },
+  "command_frequency": [
+    {
+      "command": "앞으로 가줘",
+      "count": 450,
+      "success_rate": 0.95
+    },
+    {
+      "command": "오른쪽으로 돌아",
+      "count": 320,
+      "success_rate": 0.91
+    }
+  ],
+  "learning_insights": [
+    {
+      "pattern": "morning_preference",
+      "description": "아침 시간대에 이동 명령을 더 자주 사용",
+      "confidence": 0.78
+    }
+  ],
+  "timestamp": "2024-01-01T12:00:00Z"
+}
+```
+
 ## 🔄 실시간 데이터 스트림
 
 ### WebSocket 이벤트
