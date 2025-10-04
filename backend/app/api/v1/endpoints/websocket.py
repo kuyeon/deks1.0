@@ -18,9 +18,10 @@ class ConnectionManager:
         self.active_connections: List[WebSocket] = []
         self.robot_connections: Dict[str, WebSocket] = {}
     
-    async def connect(self, websocket: WebSocket, connection_type: str = "client"):
+    async def connect(self, websocket: WebSocket, connection_type: str = "client", already_accepted: bool = False):
         """WebSocket 연결을 수락합니다."""
-        await websocket.accept()
+        if not already_accepted:
+            await websocket.accept()
         self.active_connections.append(websocket)
         
         if connection_type == "robot":
@@ -168,10 +169,22 @@ async def websocket_robot_endpoint(websocket: WebSocket):
         await manager.disconnect(websocket)
 
 
-@router.websocket("/client")
+@router.websocket("/ws")
 async def websocket_client_endpoint(websocket: WebSocket):
     """클라이언트와의 WebSocket 연결 엔드포인트"""
-    await manager.connect(websocket, "client")
+    # Origin 검사 (개발 환경에서는 모든 Origin 허용)
+    origin = websocket.headers.get("origin")
+    logger.info(f"WebSocket 연결 시도 - Origin: {origin}")
+    
+    # WebSocket 연결 수락 (Origin 검사 우회)
+    try:
+        await websocket.accept()
+        logger.info("WebSocket 연결 수락됨")
+    except Exception as e:
+        logger.error(f"WebSocket 연결 수락 실패: {e}")
+        return
+    
+    await manager.connect(websocket, "client", already_accepted=True)
     
     try:
         while True:

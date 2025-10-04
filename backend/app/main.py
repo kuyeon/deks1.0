@@ -10,6 +10,8 @@ import sys
 from app.core.config import get_settings
 from app.api.v1 import api_router
 from app.database.init_db import init_database
+from fastapi import WebSocket, WebSocketDisconnect
+import json
 
 
 # 설정 가져오기
@@ -47,6 +49,51 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# WebSocket CORS 설정
+from fastapi.middleware.cors import CORSMiddleware as WSOriginChecker
+
+@app.middleware("http")
+async def add_cors_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
+
+
+# WebSocket 연결 관리
+active_connections = []
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """간단한 WebSocket 엔드포인트"""
+    await websocket.accept()
+    active_connections.append(websocket)
+    logger.info(f"WebSocket 연결됨. 총 연결 수: {len(active_connections)}")
+    
+    try:
+        while True:
+            # 클라이언트에서 메시지 수신
+            data = await websocket.receive_text()
+            message = json.loads(data)
+            logger.info(f"WebSocket 메시지 수신: {message}")
+            
+            # 에코 응답
+            await websocket.send_text(json.dumps({
+                "type": "echo",
+                "message": "메시지를 받았습니다",
+                "original": message
+            }))
+            
+    except WebSocketDisconnect:
+        active_connections.remove(websocket)
+        logger.info(f"WebSocket 연결 해제됨. 총 연결 수: {len(active_connections)}")
+    except Exception as e:
+        logger.error(f"WebSocket 오류: {e}")
+        if websocket in active_connections:
+            active_connections.remove(websocket)
 
 
 @app.on_event("startup")
