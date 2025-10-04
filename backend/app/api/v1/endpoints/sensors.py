@@ -6,8 +6,10 @@ from fastapi import APIRouter, HTTPException
 from typing import Optional
 from pydantic import BaseModel
 from loguru import logger
+from datetime import datetime
 
 from app.database.database_manager import db_manager
+from app.services.socket_bridge import get_socket_bridge
 
 router = APIRouter()
 
@@ -53,29 +55,33 @@ async def get_distance_sensors():
     try:
         logger.info("적외선 센서 데이터 조회 요청")
         
-        # TODO: Socket Bridge를 통해 ESP32에서 실시간 센서 데이터 수신
-        # HARDWARE.md에 따르면 적외선 거리센서 2개 (전방 장애물 감지 + 낙하 감지)
+        # Socket Bridge를 통해 최신 센서 데이터 조회
+        socket_bridge = await get_socket_bridge()
+        sensor_manager = socket_bridge.sensor_manager
         
-        sensor_data = {
-            'front': 25.5,  # 전방 적외선 센서 (5-30cm 감지 범위)
-            'drop_detection': False,  # 낙하 감지 (적외선 센서)
-            'unit': 'cm',
-            'timestamp': "2024-01-01T12:00:00Z",
-            'status': 'normal'
-        }
+        # 최신 센서 데이터 가져오기
+        sensor_data = await sensor_manager.get_latest_sensor_data()
         
-        # 센서 데이터를 데이터베이스에 저장 (실제 구현 시)
-        # db_manager.save_sensor_data({
-        #     'robot_id': 'deks_001',
-        #     'front_distance': sensor_data['front'],
-        #     'left_distance': sensor_data['left'],
-        #     'right_distance': sensor_data['right'],
-        #     'drop_detected': False,
-        #     'battery_voltage': 3.7,
-        #     'temperature': 25.0
-        # })
+        if sensor_data:
+            # 실제 센서 데이터 사용
+            response_data = {
+                'front': sensor_data.get('front_distance', 0),
+                'drop_detection': sensor_data.get('drop_detection', False),
+                'unit': 'cm',
+                'timestamp': sensor_data.get('timestamp', datetime.now().isoformat()),
+                'status': 'normal'
+            }
+        else:
+            # 기본값 사용 (센서 데이터가 없는 경우)
+            response_data = {
+                'front': 25.5,  # 전방 적외선 센서 (5-30cm 감지 범위)
+                'drop_detection': False,  # 낙하 감지 (적외선 센서)
+                'unit': 'cm',
+                'timestamp': datetime.now().isoformat(),
+                'status': 'no_data'
+            }
         
-        return DistanceSensorData(**sensor_data)
+        return DistanceSensorData(**response_data)
         
     except Exception as e:
         logger.error(f"거리 센서 데이터 조회 중 오류: {e}")

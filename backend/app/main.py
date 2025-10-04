@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.api.v1 import api_router
 from app.database.init_db import init_database
 from fastapi import WebSocket, WebSocketDisconnect
+from app.services.socket_bridge import start_socket_bridge, stop_socket_bridge, get_socket_bridge
 import json
 
 
@@ -105,8 +106,12 @@ async def startup_event():
     await init_database()
     logger.info("데이터베이스 초기화 완료")
     
-    # Socket Bridge 초기화 (향후 구현)
-    # await init_socket_bridge()
+    # Socket Bridge 초기화
+    try:
+        await start_socket_bridge()
+        logger.info("Socket Bridge 초기화 완료")
+    except Exception as e:
+        logger.error(f"Socket Bridge 초기화 실패: {e}")
     
     logger.info("Deks 백엔드 서버 시작 완료")
 
@@ -116,8 +121,12 @@ async def shutdown_event():
     """애플리케이션 종료 시 실행되는 이벤트"""
     logger.info("Deks 백엔드 서버 종료 중...")
     
-    # Socket Bridge 정리 (향후 구현)
-    # await cleanup_socket_bridge()
+    # Socket Bridge 정리
+    try:
+        await stop_socket_bridge()
+        logger.info("Socket Bridge 정리 완료")
+    except Exception as e:
+        logger.error(f"Socket Bridge 정리 실패: {e}")
     
     logger.info("Deks 백엔드 서버 종료 완료")
 
@@ -140,11 +149,37 @@ async def root():
 @app.get("/health")
 async def health_check():
     """헬스 체크 엔드포인트"""
-    return {
-        "status": "healthy",
-        "service": "deks-backend",
-        "version": settings.project_version
-    }
+    try:
+        # Socket Bridge 상태 확인
+        socket_bridge = await get_socket_bridge()
+        bridge_status = await socket_bridge.health_check()
+        
+        return {
+            "status": "healthy",
+            "service": "deks-backend",
+            "version": settings.project_version,
+            "socket_bridge": bridge_status
+        }
+    except Exception as e:
+        logger.error(f"헬스 체크 실패: {e}")
+        return {
+            "status": "error",
+            "service": "deks-backend",
+            "version": settings.project_version,
+            "error": str(e)
+        }
+
+
+@app.get("/socket-bridge/status")
+async def socket_bridge_status():
+    """Socket Bridge 상태 조회"""
+    try:
+        socket_bridge = await get_socket_bridge()
+        status = await socket_bridge.get_connection_status()
+        return status
+    except Exception as e:
+        logger.error(f"Socket Bridge 상태 조회 실패: {e}")
+        return {"error": str(e)}
 
 
 if __name__ == "__main__":

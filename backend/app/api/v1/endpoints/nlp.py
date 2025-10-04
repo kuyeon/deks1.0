@@ -9,6 +9,8 @@ from loguru import logger
 import time
 
 from app.database.database_manager import db_manager
+from app.services.socket_bridge import get_socket_bridge
+from datetime import datetime
 
 router = APIRouter()
 
@@ -133,7 +135,44 @@ async def parse_command(request: ParseCommandRequest):
         parsed_result = parse_natural_language_command(request.message)
         
         if parsed_result["action"]:
-            command_id = f"cmd_{hash(request.message) % 10000}"
+            command_id = f"cmd_{int(datetime.now().timestamp())}"
+            
+            # Socket Bridge를 통해 실제 로봇 명령 실행
+            try:
+                socket_bridge = await get_socket_bridge()
+                robot_controller = socket_bridge.robot_controller
+                
+                # 파싱된 명령을 로봇 제어기로 전달
+                action = parsed_result["action"]
+                parameters = parsed_result["parameters"] or {}
+                
+                command_success = False
+                
+                if action == "move_forward":
+                    command_success = await robot_controller.move_forward(
+                        parameters.get("speed", 50),
+                        parameters.get("distance", 100)
+                    )
+                elif action == "turn_left":
+                    command_success = await robot_controller.turn_left(
+                        parameters.get("angle", 90)
+                    )
+                elif action == "turn_right":
+                    command_success = await robot_controller.turn_right(
+                        parameters.get("angle", 90)
+                    )
+                elif action == "stop":
+                    command_success = await robot_controller.stop()
+                elif action == "spin":
+                    command_success = await robot_controller.spin(
+                        parameters.get("rotations", 1)
+                    )
+                
+                if not command_success:
+                    logger.warning(f"로봇 명령 실행 실패: {action}")
+                
+            except Exception as e:
+                logger.error(f"Socket Bridge 명령 실행 중 오류: {e}")
             
             # 데이터베이스에 상호작용 기록 저장
             interaction_data = {
@@ -157,7 +196,7 @@ async def parse_command(request: ParseCommandRequest):
                 confidence=parsed_result["confidence"],
                 response=parsed_result["response"],
                 parameters=parsed_result["parameters"],
-                timestamp="2024-01-01T12:00:00Z"
+                timestamp=datetime.now().isoformat()
             )
         else:
             # 인식되지 않은 명령에 대한 제안 생성
