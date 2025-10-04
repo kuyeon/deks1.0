@@ -7,6 +7,8 @@ from typing import List, Optional
 from pydantic import BaseModel
 from loguru import logger
 
+from app.database.database_manager import db_manager
+
 router = APIRouter()
 
 
@@ -68,33 +70,35 @@ async def get_user_patterns(
     try:
         logger.info(f"사용자 패턴 분석 요청: {user_id} ({days}일)")
         
-        # TODO: 데이터베이스에서 사용자 패턴 분석
-        # 실제 구현 시 SQLite에서 데이터를 조회하여 분석
+        # 데이터베이스에서 사용자 패턴 분석
+        pattern_data = db_manager.get_user_patterns(user_id, days)
+        
+        # 시간대 분석 (현재는 기본값, 향후 구현)
+        preferred_time_slots = ["morning", "evening"]
+        
+        # 에러 패턴에 제안 추가
+        common_error_patterns = []
+        for error_pattern in pattern_data.get('error_patterns', []):
+            if error_pattern['error_type'] == 'unknown_command':
+                common_error_patterns.append({
+                    "error_type": error_pattern['error_type'],
+                    "frequency": error_pattern['frequency'],
+                    "suggestions": ["앞으로 가줘", "정지해줘", "오른쪽으로 돌아줘"]
+                })
+            else:
+                common_error_patterns.append({
+                    "error_type": error_pattern['error_type'],
+                    "frequency": error_pattern['frequency'],
+                    "suggestions": []
+                })
         
         return {
             "success": True,
             "user_id": user_id,
-            "analysis_period": f"{days}_days",
-            "frequent_commands": [
-                {
-                    "command": "앞으로 가줘",
-                    "frequency": 15,
-                    "success_rate": 0.93
-                },
-                {
-                    "command": "오른쪽으로 돌아줘",
-                    "frequency": 8,
-                    "success_rate": 0.88
-                }
-            ],
-            "preferred_time_slots": ["morning", "evening"],
-            "common_error_patterns": [
-                {
-                    "error_type": "unknown_command",
-                    "frequency": 3,
-                    "suggestions": ["앞으로 가줘", "정지해줘"]
-                }
-            ],
+            "analysis_period": pattern_data.get('analysis_period', f"{days}_days"),
+            "frequent_commands": pattern_data.get('frequent_commands', []),
+            "preferred_time_slots": preferred_time_slots,
+            "common_error_patterns": common_error_patterns,
             "timestamp": "2024-01-01T12:00:00Z"
         }
         

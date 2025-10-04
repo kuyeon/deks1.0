@@ -6,8 +6,11 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
 from pydantic import BaseModel
 from loguru import logger
+import time
+from datetime import datetime
 
 from app.core.config import get_settings
+from app.database.database_manager import db_manager
 
 router = APIRouter()
 settings = get_settings()
@@ -65,8 +68,23 @@ async def move_forward(request: MoveForwardRequest):
         # TODO: Socket Bridge를 통해 ESP32에 명령 전송
         # command_id = await socket_bridge.send_command("move_forward", request.dict())
         
-        # 임시 응답 (실제 구현 시 제거)
         command_id = f"cmd_{hash(str(request)) % 10000}"
+        
+        # 명령 실행 로그 저장
+        log_data = {
+            'command_id': command_id,
+            'command_type': 'move_forward',
+            'parameters': {
+                'speed': request.speed,
+                'distance': request.distance
+            },
+            'user_id': request.user_id,
+            'robot_id': 'deks_001',
+            'success': True,
+            'execution_time': 0.0,  # 실제 구현 시 측정
+            'error_message': None
+        }
+        db_manager.save_command_execution_log(log_data)
         
         return CommandResponse(
             success=True,

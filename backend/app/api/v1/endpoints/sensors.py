@@ -7,6 +7,8 @@ from typing import Optional
 from pydantic import BaseModel
 from loguru import logger
 
+from app.database.database_manager import db_manager
+
 router = APIRouter()
 
 
@@ -53,15 +55,29 @@ async def get_distance_sensors():
         logger.info("거리 센서 데이터 조회 요청")
         
         # TODO: Socket Bridge를 통해 ESP32에서 실시간 센서 데이터 수신
+        # 현재는 모의 데이터를 사용하지만, 실제 구현 시 ESP32에서 받은 데이터를 저장
         
-        return DistanceSensorData(
-            front=25.5,
-            left=30.2,
-            right=28.8,
-            unit="cm",
-            timestamp="2024-01-01T12:00:00Z",
-            status="normal"
-        )
+        sensor_data = {
+            'front': 25.5,
+            'left': 30.2,
+            'right': 28.8,
+            'unit': 'cm',
+            'timestamp': "2024-01-01T12:00:00Z",
+            'status': 'normal'
+        }
+        
+        # 센서 데이터를 데이터베이스에 저장 (실제 구현 시)
+        # db_manager.save_sensor_data({
+        #     'robot_id': 'deks_001',
+        #     'front_distance': sensor_data['front'],
+        #     'left_distance': sensor_data['left'],
+        #     'right_distance': sensor_data['right'],
+        #     'drop_detected': False,
+        #     'battery_voltage': 3.7,
+        #     'temperature': 25.0
+        # })
+        
+        return DistanceSensorData(**sensor_data)
         
     except Exception as e:
         logger.error(f"거리 센서 데이터 조회 중 오류: {e}")

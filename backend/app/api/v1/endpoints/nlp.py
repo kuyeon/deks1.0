@@ -6,6 +6,9 @@ from fastapi import APIRouter, HTTPException
 from typing import List, Optional
 from pydantic import BaseModel
 from loguru import logger
+import time
+
+from app.database.database_manager import db_manager
 
 router = APIRouter()
 
@@ -132,8 +135,20 @@ async def parse_command(request: ParseCommandRequest):
         if parsed_result["action"]:
             command_id = f"cmd_{hash(request.message) % 10000}"
             
-            # TODO: 데이터베이스에 상호작용 기록 저장
-            # await save_user_interaction(request, parsed_result, command_id)
+            # 데이터베이스에 상호작용 기록 저장
+            interaction_data = {
+                'command': request.message,
+                'response': parsed_result["response"],
+                'success': True,
+                'user_id': request.user_id,
+                'session_id': request.session_id,
+                'command_id': command_id,
+                'confidence': parsed_result["confidence"],
+                'execution_time': 0.0  # NLP 처리 시간은 즉시이므로 0
+            }
+            
+            db_manager.save_user_interaction(interaction_data)
+            db_manager.update_command_frequency(request.message, success=True)
             
             return ParseCommandResponse(
                 success=True,
@@ -149,6 +164,17 @@ async def parse_command(request: ParseCommandRequest):
             suggestions = []
             for action, pattern_info in COMMAND_PATTERNS.items():
                 suggestions.extend(pattern_info["patterns"][:2])  # 각 액션당 2개씩 제안
+            
+            # 실패한 명령을 에러 패턴으로 저장
+            error_data = {
+                'failed_command': request.message,
+                'error_type': 'unknown_command',
+                'user_id': request.user_id,
+                'error_message': '명령을 이해할 수 없습니다',
+                'context': {'session_id': request.session_id}
+            }
+            db_manager.save_error_pattern(error_data)
+            db_manager.update_command_frequency(request.message, success=False)
             
             return ParseCommandResponse(
                 success=False,
