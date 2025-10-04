@@ -71,13 +71,99 @@ class DeksDashboard {
             });
         });
 
-        // 슬라이더 값 변경
-        document.getElementById('speedSlider').addEventListener('input', (e) => {
-            document.getElementById('speedValue').textContent = e.target.value;
+        // 파라미터 입력 필드 값 변경 및 검증
+        document.getElementById('speedInput').addEventListener('input', (e) => {
+            let value = parseInt(e.target.value);
+            // 빈 값이나 NaN은 허용 (사용자가 입력 중일 수 있음)
+            if (isNaN(value)) return;
+            
+            // 범위 초과 시 경고 메시지
+            if (value < 0) {
+                this.showToast('속도는 0 이상이어야 합니다.', 'error');
+                e.target.value = 0;
+            } else if (value > 100) {
+                this.showToast('속도는 100 이하여야 합니다.', 'error');
+                e.target.value = 100;
+            }
         });
 
-        document.getElementById('distanceSlider').addEventListener('input', (e) => {
-            document.getElementById('distanceValue').textContent = e.target.value;
+        document.getElementById('distanceInput').addEventListener('input', (e) => {
+            let value = parseInt(e.target.value);
+            // 빈 값이나 NaN은 허용 (사용자가 입력 중일 수 있음)
+            if (isNaN(value)) return;
+            
+            // 범위 초과 시 경고 메시지
+            if (value < 0) {
+                this.showToast('거리는 0 이상이어야 합니다.', 'error');
+                e.target.value = 0;
+            } else if (value > 200) {
+                this.showToast('거리는 200 이하여야 합니다.', 'error');
+                e.target.value = 200;
+            }
+        });
+
+        // 키보드 입력 처리 (숫자 키패드)
+        document.getElementById('speedInput').addEventListener('keydown', (e) => {
+            // 숫자 키패드 (0-9, Numpad0-Numpad9)
+            if (e.key >= '0' && e.key <= '9' || 
+                e.key === 'Numpad0' || e.key === 'Numpad1' || e.key === 'Numpad2' || 
+                e.key === 'Numpad3' || e.key === 'Numpad4' || e.key === 'Numpad5' || 
+                e.key === 'Numpad6' || e.key === 'Numpad7' || e.key === 'Numpad8' || 
+                e.key === 'Numpad9') {
+                // 숫자 입력 허용
+                return;
+            }
+            
+            // 허용되는 키들 (백스페이스, 삭제, 탭, 엔터, 화살표 키)
+            if (['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
+                return;
+            }
+            
+            // 다른 키들은 차단
+            e.preventDefault();
+        });
+
+        document.getElementById('distanceInput').addEventListener('keydown', (e) => {
+            // 숫자 키패드 (0-9, Numpad0-Numpad9)
+            if (e.key >= '0' && e.key <= '9' || 
+                e.key === 'Numpad0' || e.key === 'Numpad1' || e.key === 'Numpad2' || 
+                e.key === 'Numpad3' || e.key === 'Numpad4' || e.key === 'Numpad5' || 
+                e.key === 'Numpad6' || e.key === 'Numpad7' || e.key === 'Numpad8' || 
+                e.key === 'Numpad9') {
+                // 숫자 입력 허용
+                return;
+            }
+            
+            // 허용되는 키들 (백스페이스, 삭제, 탭, 엔터, 화살표 키)
+            if (['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
+                return;
+            }
+            
+            // 다른 키들은 차단
+            e.preventDefault();
+        });
+
+        // 포커스 아웃 시 값 검증
+        document.getElementById('speedInput').addEventListener('blur', (e) => {
+            let value = parseInt(e.target.value);
+            if (isNaN(value) || value < 0) {
+                this.showToast('속도는 0 이상이어야 합니다.', 'error');
+                e.target.value = 0;
+            } else if (value > 100) {
+                this.showToast('속도는 100 이하여야 합니다.', 'error');
+                e.target.value = 100;
+            }
+        });
+
+        document.getElementById('distanceInput').addEventListener('blur', (e) => {
+            let value = parseInt(e.target.value);
+            if (isNaN(value) || value < 0) {
+                this.showToast('거리는 0 이상이어야 합니다.', 'error');
+                e.target.value = 0;
+            } else if (value > 200) {
+                this.showToast('거리는 200 이하여야 합니다.', 'error');
+                e.target.value = 200;
+            }
         });
 
         // 센서 자동 새로고침 토글
@@ -193,14 +279,12 @@ class DeksDashboard {
      * 센서 데이터 표시
      */
     displaySensorData(data) {
-        const sensors = data.sensor_data || data;
+        // 전방 적외선 센서 (장애물 감지)
+        document.getElementById('frontDistance').textContent = `${data.front || 0} ${data.unit || 'cm'}`;
         
-        document.getElementById('frontDistance').textContent = `${sensors.front || 0} cm`;
-        document.getElementById('leftDistance').textContent = `${sensors.left || 0} cm`;
-        document.getElementById('rightDistance').textContent = `${sensors.right || 0} cm`;
-        
+        // 낙하 감지 (적외선 센서)
         const dropElement = document.getElementById('dropDetection');
-        if (sensors.drop_detected) {
+        if (data.drop_detection) {
             dropElement.textContent = '위험';
             dropElement.className = 'sensor-value danger';
         } else {
@@ -251,8 +335,8 @@ class DeksDashboard {
         
         try {
             let result;
-            const speed = parseInt(document.getElementById('speedSlider').value);
-            const distance = parseInt(document.getElementById('distanceSlider').value);
+            const speed = parseInt(document.getElementById('speedInput').value);
+            const distance = parseInt(document.getElementById('distanceInput').value);
 
             switch (action) {
                 case 'move_forward':

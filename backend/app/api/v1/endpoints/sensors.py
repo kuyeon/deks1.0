@@ -14,10 +14,9 @@ router = APIRouter()
 
 # 응답 모델
 class DistanceSensorData(BaseModel):
-    """거리 센서 데이터 모델"""
-    front: float
-    left: float
-    right: float
+    """적외선 센서 데이터 모델"""
+    front: float  # 전방 적외선 센서 (장애물 감지)
+    drop_detection: bool  # 낙하 감지 (적외선 센서)
     unit: str = "cm"
     timestamp: str
     status: str
@@ -50,17 +49,16 @@ class SensorResponse(BaseModel):
 
 @router.get("/distance", response_model=DistanceSensorData)
 async def get_distance_sensors():
-    """거리 센서 데이터를 조회합니다."""
+    """적외선 센서 데이터를 조회합니다."""
     try:
-        logger.info("거리 센서 데이터 조회 요청")
+        logger.info("적외선 센서 데이터 조회 요청")
         
         # TODO: Socket Bridge를 통해 ESP32에서 실시간 센서 데이터 수신
-        # 현재는 모의 데이터를 사용하지만, 실제 구현 시 ESP32에서 받은 데이터를 저장
+        # HARDWARE.md에 따르면 적외선 거리센서 2개 (전방 장애물 감지 + 낙하 감지)
         
         sensor_data = {
-            'front': 25.5,
-            'left': 30.2,
-            'right': 28.8,
+            'front': 25.5,  # 전방 적외선 센서 (5-30cm 감지 범위)
+            'drop_detection': False,  # 낙하 감지 (적외선 센서)
             'unit': 'cm',
             'timestamp': "2024-01-01T12:00:00Z",
             'status': 'normal'

@@ -80,26 +80,8 @@
                                 <i class="fas fa-arrow-up"></i>
                             </div>
                             <div class="sensor-info">
-                                <span class="sensor-label">전방</span>
+                                <span class="sensor-label">전방 장애물 거리</span>
                                 <span class="sensor-value" id="frontDistance">25.5 cm</span>
-                            </div>
-                        </div>
-                        <div class="sensor-item">
-                            <div class="sensor-icon">
-                                <i class="fas fa-arrow-left"></i>
-                            </div>
-                            <div class="sensor-info">
-                                <span class="sensor-label">좌측</span>
-                                <span class="sensor-value" id="leftDistance">30.2 cm</span>
-                            </div>
-                        </div>
-                        <div class="sensor-item">
-                            <div class="sensor-icon">
-                                <i class="fas fa-arrow-right"></i>
-                            </div>
-                            <div class="sensor-info">
-                                <span class="sensor-label">우측</span>
-                                <span class="sensor-value" id="rightDistance">28.8 cm</span>
                             </div>
                         </div>
                         <div class="sensor-item">
@@ -121,21 +103,21 @@
                     </div>
                     <div class="control-content">
                         <div class="control-grid">
-                            <button class="control-btn move-btn" id="moveForward" data-action="move_forward">
-                                <i class="fas fa-arrow-up"></i>
-                                <span>전진</span>
-                            </button>
                             <button class="control-btn move-btn" id="turnLeft" data-action="turn_left">
                                 <i class="fas fa-arrow-left"></i>
                                 <span>좌회전</span>
+                            </button>
+                            <button class="control-btn move-btn" id="turnRight" data-action="turn_right">
+                                <i class="fas fa-arrow-right"></i>
+                                <span>우회전</span>
                             </button>
                             <button class="control-btn stop-btn" id="stopRobot" data-action="stop">
                                 <i class="fas fa-stop"></i>
                                 <span>정지</span>
                             </button>
-                            <button class="control-btn move-btn" id="turnRight" data-action="turn_right">
-                                <i class="fas fa-arrow-right"></i>
-                                <span>우회전</span>
+                            <button class="control-btn move-btn" id="moveForward" data-action="move_forward">
+                                <i class="fas fa-arrow-up"></i>
+                                <span>전진</span>
                             </button>
                             <button class="control-btn special-btn" id="spinRobot" data-action="spin">
                                 <i class="fas fa-sync-alt"></i>
@@ -144,12 +126,12 @@
                         </div>
                         <div class="control-params">
                             <div class="param-group">
-                                <label for="speedSlider">속도: <span id="speedValue">50</span>%</label>
-                                <input type="range" id="speedSlider" min="10" max="100" value="50" class="slider">
+                                <label for="speedInput">속도 (%)</label>
+                                <input type="number" id="speedInput" min="0" max="100" value="50" class="param-input" placeholder="0-100">
                             </div>
                             <div class="param-group">
-                                <label for="distanceSlider">거리: <span id="distanceValue">100</span>cm</label>
-                                <input type="range" id="distanceSlider" min="10" max="200" value="100" class="slider">
+                                <label for="distanceInput">거리 (cm)</label>
+                                <input type="number" id="distanceInput" min="0" max="200" value="100" class="param-input" placeholder="0-200">
                             </div>
                         </div>
                     </div>
