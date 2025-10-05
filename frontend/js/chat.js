@@ -21,9 +21,12 @@ class DeksChat {
         this.chatInput = document.getElementById('chatInput');
         this.chatSendBtn = document.getElementById('chatSendBtn');
         this.clearChatBtn = document.getElementById('clearChat');
-        this.toggleChatBtn = document.getElementById('toggleChat');
-        this.chatContent = document.getElementById('chatContent');
-        this.chatSuggestions = document.querySelectorAll('.chat-suggestion');
+        this.chatModeBtn = document.getElementById('chatMode');
+        this.commandModeBtn = document.getElementById('commandMode');
+        this.chatModeContent = document.getElementById('chatModeContent');
+        this.commandModeContent = document.getElementById('commandModeContent');
+        this.commandHistory = document.getElementById('commandHistory');
+        this.suggestionTags = document.querySelectorAll('.suggestion-tag');
     }
 
     /**
@@ -41,10 +44,13 @@ class DeksChat {
 
         // 채팅 제어
         this.clearChatBtn.addEventListener('click', () => this.clearChat());
-        this.toggleChatBtn.addEventListener('click', () => this.toggleChat());
+        
+        // 모드 전환
+        this.chatModeBtn.addEventListener('click', () => this.switchMode('chat'));
+        this.commandModeBtn.addEventListener('click', () => this.switchMode('command'));
 
         // 추천 메시지 클릭
-        this.chatSuggestions.forEach(suggestion => {
+        this.suggestionTags.forEach(suggestion => {
             suggestion.addEventListener('click', () => {
                 const message = suggestion.getAttribute('data-message');
                 this.chatInput.value = message;
@@ -148,6 +154,11 @@ class DeksChat {
             timestamp: new Date().toISOString(),
             metadata
         });
+
+        // 명령인 경우 명령 기록에도 추가
+        if (sender === 'user' && this.isCommand(text)) {
+            this.addCommandToHistory(text);
+        }
     }
 
     /**
@@ -285,16 +296,26 @@ class DeksChat {
     }
 
     /**
-     * 채팅 토글
+     * 모드 전환
      */
-    toggleChat() {
-        const isVisible = this.chatContent.style.display !== 'none';
-        this.chatContent.style.display = isVisible ? 'none' : 'flex';
+    switchMode(mode) {
+        // 버튼 상태 업데이트
+        this.chatModeBtn.classList.toggle('active', mode === 'chat');
+        this.commandModeBtn.classList.toggle('active', mode === 'command');
         
-        const icon = this.toggleChatBtn.querySelector('i');
-        icon.className = isVisible ? 'fas fa-comments' : 'fas fa-comments';
+        // 콘텐츠 표시/숨김
+        this.chatModeContent.classList.toggle('active', mode === 'chat');
+        this.commandModeContent.classList.toggle('active', mode === 'command');
         
-        if (!isVisible) {
+        // 입력 필드 플레이스홀더 업데이트
+        if (mode === 'chat') {
+            this.chatInput.placeholder = '덱스에게 메시지를 보내거나 명령을 내려주세요...';
+        } else {
+            this.chatInput.placeholder = '덱스에게 명령을 내려주세요...';
+        }
+        
+        // 채팅 모드로 전환 시 스크롤
+        if (mode === 'chat') {
             this.scrollToBottom();
         }
     }
@@ -352,6 +373,45 @@ class DeksChat {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    /**
+     * 명령인지 확인
+     */
+    isCommand(text) {
+        const commandKeywords = [
+            '앞으로', '뒤로', '왼쪽', '오른쪽', '돌아', '정지', '멈춰', '빙글빙글',
+            '이동', '가줘', '돌아줘', '멈춰줘', '정지해줘', '움직여', '회전'
+        ];
+        
+        return commandKeywords.some(keyword => text.includes(keyword));
+    }
+
+    /**
+     * 명령 기록에 추가
+     */
+    addCommandToHistory(command) {
+        const historyList = this.commandHistory.querySelector('.history-list');
+        const time = new Date().toLocaleTimeString('ko-KR', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const historyItem = document.createElement('div');
+        historyItem.className = 'history-item';
+        historyItem.innerHTML = `
+            <span class="history-command">${this.escapeHtml(command)}</span>
+            <span class="history-time">${time}</span>
+        `;
+
+        // 최신 명령을 맨 위에 추가
+        historyList.insertBefore(historyItem, historyList.firstChild);
+
+        // 최대 10개까지만 유지
+        const items = historyList.querySelectorAll('.history-item');
+        if (items.length > 10) {
+            historyList.removeChild(items[items.length - 1]);
+        }
     }
 
     /**

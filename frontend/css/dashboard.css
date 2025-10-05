@@ -5,8 +5,8 @@
     gap: 2rem;
 }
 
-/* 채팅 인터페이스 카드 */
-.chat-interface {
+/* 통합 채팅 인터페이스 카드 */
+.integrated-chat-interface {
     grid-column: span 2; /* 채팅 카드는 2칸 차지 */
     min-height: 500px;
 }
@@ -14,6 +14,39 @@
 .chat-controls {
     display: flex;
     gap: 0.5rem;
+    align-items: center;
+}
+
+.mode-toggle {
+    display: flex;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 8px;
+    padding: 2px;
+    margin-right: 0.5rem;
+}
+
+.mode-btn {
+    background: none;
+    border: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+    color: #667eea;
+}
+
+.mode-btn.active {
+    background: white;
+    color: #667eea;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.mode-btn:hover:not(.active) {
+    background: rgba(102, 126, 234, 0.2);
 }
 
 .chat-toggle-btn,
@@ -33,10 +66,22 @@
     color: #5a67d8;
 }
 
-.chat-content {
+.integrated-content {
     height: 400px;
     display: flex;
     flex-direction: column;
+}
+
+.chat-mode,
+.command-mode {
+    display: none;
+    flex: 1;
+    flex-direction: column;
+}
+
+.chat-mode.active,
+.command-mode.active {
+    display: flex;
 }
 
 .chat-messages {
@@ -130,15 +175,34 @@
     margin-top: 0.25rem;
 }
 
-.chat-input-container {
+.input-container {
     border-top: 1px solid #e2e8f0;
     padding-top: 1rem;
 }
 
-.chat-input-wrapper {
+.input-wrapper {
     display: flex;
     gap: 0.5rem;
     margin-bottom: 0.75rem;
+}
+
+.suggestions-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.suggestion-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.suggestion-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 0.25rem;
 }
 
 #chatInput {
@@ -155,7 +219,7 @@
     border-color: #667eea;
 }
 
-.chat-send-btn {
+.send-btn {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
@@ -169,24 +233,24 @@
     justify-content: center;
 }
 
-.chat-send-btn:hover {
+.send-btn:hover {
     transform: scale(1.05);
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
 }
 
-.chat-send-btn:disabled {
+.send-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     transform: none;
 }
 
-.chat-suggestions {
+.suggestion-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
 }
 
-.chat-suggestion {
+.suggestion-tag {
     background: rgba(102, 126, 234, 0.1);
     color: #667eea;
     padding: 0.5rem 0.75rem;
@@ -197,7 +261,7 @@
     border: 1px solid rgba(102, 126, 234, 0.2);
 }
 
-.chat-suggestion:hover {
+.suggestion-tag:hover {
     background: rgba(102, 126, 234, 0.2);
     transform: translateY(-1px);
 }
@@ -260,6 +324,87 @@
         transform: scale(1);
         opacity: 1;
     }
+}
+
+/* 명령 모드 스타일 */
+.command-info {
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.info-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: rgba(102, 126, 234, 0.05);
+    border-radius: 10px;
+    border-left: 4px solid #667eea;
+}
+
+.info-card i {
+    color: #667eea;
+    font-size: 1.2rem;
+    margin-top: 0.25rem;
+}
+
+.info-text h4 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+    font-size: 1rem;
+}
+
+.info-text p {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.command-history {
+    flex: 1;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 10px;
+    margin: 0 1rem 1rem 1rem;
+}
+
+.history-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 0.75rem;
+}
+
+.history-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: white;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    border-left: 3px solid #667eea;
+    font-size: 0.85rem;
+}
+
+.history-item:last-child {
+    margin-bottom: 0;
+}
+
+.history-command {
+    color: #333;
+    font-weight: 500;
+}
+
+.history-time {
+    color: #999;
+    font-size: 0.75rem;
 }
 
 /* 로봇 상태 카드 */
