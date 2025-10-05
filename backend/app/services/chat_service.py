@@ -67,7 +67,7 @@ class ChatService:
                 "buzzer_sound": "success"
             },
             "farewell": {
-                "keywords": ["안녕히", "잘 가", "또 봐", "바이", "bye", "굿바이"],
+                "keywords": ["안녕히 가", "잘 가", "또 봐", "바이", "bye", "굿바이", "잘 있어", "나중에 봐", "다음에 봐", "또 만나", "작별"],
                 "responses": [
                     "안녕히 가세요 {user_name}님! 또 만나요. 좋은 하루 되세요!",
                     "안녕히 가세요! 언제든지 다시 찾아주세요.",
@@ -89,7 +89,7 @@ class ChatService:
                 "buzzer_sound": "success"
             },
             "confused": {
-                "keywords": ["모르겠", "이해 안", "뭐라고", "잘 모르"],
+                "keywords": ["모르겠", "이해 안", "뭐라고", "잘 모르", "뭔 소리", "이해 못해"],
                 "responses": [
                     "죄송해요. 다시 말씀해 주실 수 있나요?",
                     "이해하지 못했어요. 다른 방법으로 설명해 주세요.",
@@ -98,6 +98,28 @@ class ChatService:
                 "emotion": "confused",
                 "led_expression": "neutral",
                 "buzzer_sound": "error"
+            },
+            "request_help": {
+                "keywords": ["도와", "도움", "어떻게 해야", "방법", "알려", "가르쳐", "어떻게 해야 해"],
+                "responses": [
+                    "무엇을 도와드릴까요? 구체적으로 말씀해 주세요.",
+                    "저는 로봇 제어를 도와드릴 수 있어요. 어떤 도움이 필요하신가요?",
+                    "앞으로 가달라고 하시면 이동할 수 있어요. 명령을 내려보세요!"
+                ],
+                "emotion": "helpful",
+                "led_expression": "happy",
+                "buzzer_sound": "notification"
+            },
+            "praise": {
+                "keywords": ["잘했", "좋았", "멋있", "훌륭", "대단", "최고"],
+                "responses": [
+                    "고마워요! 정말 기뻐요!",
+                    "칭찬해 주셔서 감사해요. 더 열심히 할게요!",
+                    "정말 좋아요! 언제든지 도와드릴게요."
+                ],
+                "emotion": "proud",
+                "led_expression": "happy",
+                "buzzer_sound": "success"
             }
         }
     
@@ -138,6 +160,11 @@ class ChatService:
                 "led_expression": "sad",
                 "buzzer_sound": "farewell",
                 "response_style": "warm"
+            },
+            "helpful": {
+                "led_expression": "happy",
+                "buzzer_sound": "notification",
+                "response_style": "supportive"
             }
         }
     
@@ -203,12 +230,32 @@ class ChatService:
     
     def _analyze_intent(self, message: str) -> str:
         """메시지의 의도를 분석합니다."""
-        message_lower = message.lower()
+        message_lower = message.lower().strip()
         
-        for intent, pattern_data in self.conversation_patterns.items():
-            for keyword in pattern_data["keywords"]:
-                if keyword.lower() in message_lower:
-                    return intent
+        # 우선순위 기반 의도 분석 (더 구체적인 패턴을 먼저 확인)
+        priority_intents = [
+            "farewell",      # 작별 인사 (우선순위 높음)
+            "introduction",  # 자기소개
+            "question_about_robot",  # 로봇에 대한 질문
+            "question_capabilities", # 능력에 대한 질문
+            "request_help",  # 도움 요청
+            "praise",        # 칭찬
+            "compliment",    # 칭찬 (일반)
+            "confused",      # 혼란
+            "greeting"       # 인사 (우선순위 낮음)
+        ]
+        
+        # 우선순위 순서대로 의도 확인
+        for intent in priority_intents:
+            if intent in self.conversation_patterns:
+                pattern_data = self.conversation_patterns[intent]
+                for keyword in pattern_data["keywords"]:
+                    # 정확한 키워드 매칭 (부분 매칭보다 정확한 매칭 우선)
+                    if keyword.lower() == message_lower:
+                        return intent
+                    # 부분 매칭
+                    elif keyword.lower() in message_lower:
+                        return intent
         
         return "unknown"
     
@@ -250,10 +297,15 @@ class ChatService:
                 response_text = response_text.format(user_name=user_name)
             
             # 이름 추출 (자기소개인 경우)
-            if intent == "introduction" and not user_name:
+            if intent == "introduction":
                 extracted_name = self._extract_name(message)
                 if extracted_name:
+                    # 기존 사용자 이름이 없거나 추출된 이름이 더 구체적일 때 업데이트
+                    if not user_name or len(extracted_name) > 1:
+                        user_name = extracted_name
                     response_text = response_text.replace("{user_name}", extracted_name)
+                elif user_name:
+                    response_text = response_text.replace("{user_name}", user_name)
             
             return {
                 "text": response_text,
@@ -273,18 +325,42 @@ class ChatService:
     
     def _extract_name(self, message: str) -> Optional[str]:
         """메시지에서 이름을 추출합니다."""
-        # "나는 XXX야", "내 이름은 XXX", "저는 XXX" 패턴 매칭
+        # 다양한 자기소개 패턴 매칭 (더 정확한 정규표현식)
         patterns = [
-            r"나는\s+([가-힣]+)\s*야",
-            r"내\s+이름은\s+([가-힣]+)",
-            r"저는\s+([가-힣]+)",
-            r"내가\s+([가-힣]+)"
+            # "나는 김철수야" 형태
+            r"나는\s+([가-힣]{2,10})\s*야",
+            # "내 이름은 김철수야" 형태  
+            r"내\s+이름은\s+([가-힣]{2,10})\s*야",
+            # "내 이름은 김철수입니다" 형태
+            r"내\s+이름은\s+([가-힣]{2,10})\s*입니다",
+            # "내 이름은 김철수입니다" 형태 (더 정확한 매칭)
+            r"내\s+이름은\s+([가-힣]{2,10})입니다",
+            # "내 이름은 김철수" 형태 (끝에 공백이나 구두점)
+            r"내\s+이름은\s+([가-힣]{2,10})(?:\s|$)",
+            # "저는 김철수입니다" 형태
+            r"저는\s+([가-힣]{2,10})\s*입니다",
+            # "저는 김철수야" 형태
+            r"저는\s+([가-힣]{2,10})\s*야",
+            # "저는 김철수" 형태 (끝에 공백이나 구두점)
+            r"저는\s+([가-힣]{2,10})(?:\s|$)",
+            # "내가 김철수야" 형태
+            r"내가\s+([가-힣]{2,10})\s*야",
+            # "내가 김철수" 형태
+            r"내가\s+([가-힣]{2,10})(?:\s|$)",
+            # "김철수야" 형태 (단독)
+            r"^([가-힣]{2,10})\s*야$",
+            # "김철수입니다" 형태 (단독)
+            r"^([가-힣]{2,10})\s*입니다$"
         ]
         
         for pattern in patterns:
             match = re.search(pattern, message)
             if match:
-                return match.group(1)
+                name = match.group(1)
+                # 일반적인 단어가 아닌 실제 이름인지 확인
+                common_words = {"덱스", "로봇", "친구", "사람", "이름", "내", "저", "나"}
+                if name not in common_words:
+                    return name
         
         return None
     
@@ -295,7 +371,11 @@ class ChatService:
             "introduction": "저는 로봇이에요. 이동하고 센서로 주변을 감지할 수 있어요.",
             "question_about_robot": "앞으로 가달라고 하시면 이동할 수 있어요. 한번 해보실래요?",
             "question_capabilities": "무엇을 도와드릴까요?",
-            "compliment": "언제든지 도와드릴게요!"
+            "request_help": "구체적으로 어떤 도움이 필요하신가요?",
+            "praise": "언제든지 도와드릴게요!",
+            "compliment": "언제든지 도와드릴게요!",
+            "farewell": None,  # 작별 인사에는 후속 질문 없음
+            "confused": "다시 한번 말씀해 주실 수 있나요?"
         }
         
         return follow_ups.get(intent)
