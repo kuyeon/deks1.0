@@ -211,6 +211,110 @@ class DeksAPI {
     async getRobotDetailedStatus(robotId = 'deks_001') {
         return this.request(`/robot/robots/${robotId}/status`);
     }
+
+    // ==================== 채팅 API ====================
+
+    /**
+     * 채팅 메시지 전송
+     */
+    async sendChatMessage(message, sessionId = null) {
+        return this.request('/chat/message', {
+            method: 'POST',
+            body: JSON.stringify({
+                message,
+                user_id: this.userId,
+                session_id: sessionId || this.sessionId
+            })
+        });
+    }
+
+    /**
+     * 채팅 기록 조회
+     */
+    async getChatHistory(sessionId = null, limit = 50) {
+        const params = new URLSearchParams({
+            user_id: this.userId,
+            limit: limit.toString()
+        });
+        
+        if (sessionId) {
+            params.append('session_id', sessionId);
+        }
+
+        return this.request(`/chat/history?${params.toString()}`);
+    }
+
+    /**
+     * 채팅 컨텍스트 조회
+     */
+    async getChatContext(sessionId = null) {
+        const params = new URLSearchParams({
+            user_id: this.userId
+        });
+        
+        if (sessionId) {
+            params.append('session_id', sessionId);
+        }
+
+        return this.request(`/chat/context?${params.toString()}`);
+    }
+
+    /**
+     * 채팅 컨텍스트 업데이트
+     */
+    async updateChatContext(context, sessionId = null) {
+        return this.request('/chat/context', {
+            method: 'PUT',
+            body: JSON.stringify({
+                user_id: this.userId,
+                session_id: sessionId || this.sessionId,
+                context
+            })
+        });
+    }
+
+    /**
+     * 감정 상태 조회
+     */
+    async getEmotionState(sessionId = null) {
+        const params = new URLSearchParams({
+            user_id: this.userId
+        });
+        
+        if (sessionId) {
+            params.append('session_id', sessionId);
+        }
+
+        return this.request(`/chat/emotion?${params.toString()}`);
+    }
+
+    /**
+     * 감정 상태 업데이트
+     */
+    async updateEmotionState(emotion, sessionId = null) {
+        return this.request('/chat/emotion', {
+            method: 'PUT',
+            body: JSON.stringify({
+                user_id: this.userId,
+                session_id: sessionId || this.sessionId,
+                emotion
+            })
+        });
+    }
+
+    /**
+     * 대화 패턴 학습 데이터 제출
+     */
+    async submitLearningData(interactionData) {
+        return this.request('/chat/learn', {
+            method: 'POST',
+            body: JSON.stringify({
+                user_id: this.userId,
+                session_id: this.sessionId,
+                ...interactionData
+            })
+        });
+    }
 }
 
 // 전역 API 인스턴스
