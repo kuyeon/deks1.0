@@ -1,7 +1,7 @@
 /* 대시보드 그리드 */
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: 1fr 1fr; /* 2컬럼 고정 */
     gap: 2rem;
     width: 100%;
 }
@@ -14,10 +14,8 @@
 
 /* 로봇 제어 카드 - 전체 너비 차지 */
 .robot-control {
-    grid-column: 1 / -1 !important; /* 모든 컬럼 차지 */
-    width: 100% !important;
-    max-width: none !important;
-    min-width: 100% !important;
+    grid-column: span 2; /* 채팅 카드와 같은 방식으로 2칸 차지 */
+    width: 100%;
 }
 
 /* 로봇 제어 카드 내부 컨텐츠도 전체 너비 사용 */
