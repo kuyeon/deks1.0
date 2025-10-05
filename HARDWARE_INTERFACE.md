@@ -10,7 +10,7 @@ GPIO 6, 7    → 왼쪽 엔코더 A, B 채널
 GPIO 8, 9    → 오른쪽 엔코더 A, B 채널
 GPIO 10      → 적외선 센서 (낙하 방지)
 GPIO 11      → 적외선 센서 (장애물 감지)
-GPIO 21, 22  → 1588AS LED 매트릭스 (I2C SDA, SCL)
+GPIO 35 ~ 42  → 1588AS LED 매트릭스
 GPIO 12      → 패시브 버저 (PWM)
 GPIO 13      → 배터리 레벨 모니터링 (ADC)
 GPIO 1, 0    → 시리얼 디버그 (TX, RX)
