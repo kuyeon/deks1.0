@@ -309,6 +309,25 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"명령어 빈도 통계 조회 실패: {e}")
             return {'commands': [], 'total_commands': 0}
+    
+    def execute_query(self, query: str, params: tuple = ()) -> List[sqlite3.Row]:
+        """SQL 쿼리를 실행하고 결과를 반환합니다."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(query, params)
+                
+                # SELECT 쿼리인 경우 결과 반환
+                if query.strip().upper().startswith('SELECT'):
+                    return cursor.fetchall()
+                else:
+                    # INSERT, UPDATE, DELETE 등의 경우 커밋
+                    conn.commit()
+                    return []
+                    
+        except Exception as e:
+            logger.error(f"쿼리 실행 실패: {e}")
+            raise
 
 
 # 전역 데이터베이스 매니저 인스턴스
