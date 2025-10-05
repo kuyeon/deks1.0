@@ -375,6 +375,178 @@ Content-Type: application/json
 - `success`: 성공음
 - `error`: 에러음
 
+**응답 (성공)**:
+```json
+{
+  "success": true,
+  "message": "버저 소리가 재생되었습니다",
+  "sound_info": {
+    "type": "beep",
+    "frequency": 1000,
+    "duration": 500
+  },
+  "timestamp": "2024-01-01T12:00:00Z"
+}
+```
+
+## 💬 채팅 상호작용 API
+
+### 1. 메시지 전송 및 응답
+
+```http
+POST /api/v1/chat/message
+Content-Type: application/json
+
+{
+  "message": "안녕 덱스",
+  "user_id": "user_001",
+  "session_id": "session_123"
+}
+```
+
+**응답 (성공)**:
+```json
+{
+  "success": true,
+  "message_id": "msg_456",
+  "response": "안녕하세요! 저는 덱스에요. 당신은 누구신가요?",
+  "emotion": "happy",
+  "timestamp": "2024-01-01T12:00:00Z",
+  "context": {
+    "conversation_type": "greeting",
+    "user_name": null,
+    "robot_mood": "friendly"
+  }
+}
+```
+
+### 2. 대화 기록 조회
+
+```http
+GET /api/v1/chat/history?user_id=user_001&limit=20&offset=0
+```
+
+**응답**:
+```json
+{
+  "success": true,
+  "conversations": [
+    {
+      "message_id": "msg_456",
+      "user_message": "안녕 덱스",
+      "robot_response": "안녕하세요! 저는 덱스에요. 당신은 누구신가요?",
+      "timestamp": "2024-01-01T12:00:00Z",
+      "emotion": "happy"
+    }
+  ],
+  "total_count": 1,
+  "has_more": false
+}
+```
+
+### 3. 대화 컨텍스트 관리
+
+```http
+GET /api/v1/chat/context?user_id=user_001&session_id=session_123
+```
+
+**응답**:
+```json
+{
+  "success": true,
+  "context": {
+    "user_id": "user_001",
+    "session_id": "session_123",
+    "user_name": "김철수",
+    "conversation_count": 5,
+    "last_interaction": "2024-01-01T12:00:00Z",
+    "robot_mood": "friendly",
+    "current_topic": "introduction",
+    "remembered_info": {
+      "user_preferences": ["친근한 대화", "간단한 설명"],
+      "recent_commands": ["앞으로 가줘", "돌아줘"]
+    }
+  }
+}
+```
+
+### 4. 감정 상태 관리
+
+```http
+POST /api/v1/chat/emotion
+Content-Type: application/json
+
+{
+  "emotion": "happy",
+  "user_id": "user_001",
+  "reason": "사용자가 인사했음"
+}
+```
+
+**지원하는 감정 상태**:
+- `happy`: 행복함
+- `sad`: 슬픔
+- `excited`: 흥분
+- `calm`: 평온함
+- `curious`: 호기심
+- `confused`: 혼란
+
+### 5. 대화 패턴 학습
+
+```http
+POST /api/v1/chat/learning
+Content-Type: application/json
+
+{
+  "user_id": "user_001",
+  "interaction_data": {
+    "user_message": "안녕 덱스",
+    "robot_response": "안녕하세요! 저는 덱스에요.",
+    "user_feedback": "positive",
+    "context": "greeting"
+  }
+}
+```
+
+### 6. 대화 시나리오 예시
+
+#### 인사 시나리오
+```json
+{
+  "user_input": "안녕 덱스",
+  "robot_response": "안녕하세요! 저는 덱스에요. 당신은 누구신가요?",
+  "follow_up": "오늘은 어떤 도움이 필요하신가요?"
+}
+```
+
+#### 자기소개 시나리오
+```json
+{
+  "user_input": "나는 김철수야",
+  "robot_response": "안녕하세요 김철수님! 만나서 반가워요. 저는 덱스라고 해요.",
+  "follow_up": "김철수님, 저는 로봇이에요. 이동하고 센서로 주변을 감지할 수 있어요."
+}
+```
+
+#### 질문 응답 시나리오
+```json
+{
+  "user_input": "넌 뭐야?",
+  "robot_response": "저는 덱스라는 로봇이에요! 이동하고 센서로 주변을 감지할 수 있어요.",
+  "follow_up": "앞으로 가달라고 하시면 이동할 수 있어요. 한번 해보실래요?"
+}
+```
+
+#### 작별 인사 시나리오
+```json
+{
+  "user_input": "안녕히 가",
+  "robot_response": "안녕히 가세요 김철수님! 또 만나요. 좋은 하루 되세요!",
+  "follow_up": null,
+  "emotion": "happy"
+}
+```
+
 ## 👤 사용자 경험 API
 
 ### 1. 사용자 패턴 분석

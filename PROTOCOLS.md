@@ -263,25 +263,118 @@ GET /sensors/latest
 GET /sensors/history?limit=100&offset=0
 ```
 
-### 대화 API
+### 채팅 상호작용 API
 
-#### 메시지 전송
+#### 1. 메시지 전송 및 응답
 ```http
-POST /chat/message
+POST /api/v1/chat/message
 Content-Type: application/json
 
 {
-  "message": "앞으로 가줘",
-  "user_id": "user_001"
+  "message": "안녕 덱스",
+  "user_id": "user_001",
+  "session_id": "session_123"
+}
+```
+
+**응답 (채팅):**
+```json
+{
+  "success": true,
+  "message_id": "msg_456",
+  "response": "안녕하세요! 저는 덱스에요. 당신은 누구신가요?",
+  "emotion": "happy",
+  "conversation_type": "greeting",
+  "timestamp": "2024-01-01T12:00:00Z",
+  "context": {
+    "user_name": null,
+    "robot_mood": "friendly",
+    "follow_up": "오늘은 어떤 도움이 필요하신가요?"
+  }
+}
+```
+
+**응답 (명령):**
+```json
+{
+  "success": true,
+  "message_id": "msg_123",
+  "response": "앞으로 이동합니다!",
+  "action": "move_forward",
+  "emotion": "excited",
+  "timestamp": "2024-01-01T12:00:00Z"
+}
+```
+
+#### 2. 대화 기록 조회
+```http
+GET /api/v1/chat/history?user_id=user_001&limit=20&offset=0
+```
+
+**응답:**
+```json
+{
+  "success": true,
+  "conversations": [
+    {
+      "message_id": "msg_456",
+      "user_message": "안녕 덱스",
+      "robot_response": "안녕하세요! 저는 덱스에요. 당신은 누구신가요?",
+      "emotion_detected": "neutral",
+      "emotion_responded": "happy",
+      "conversation_type": "greeting",
+      "timestamp": "2024-01-01T12:00:00Z"
+    }
+  ],
+  "total_count": 1,
+  "has_more": false
+}
+```
+
+#### 3. 대화 컨텍스트 관리
+```http
+GET /api/v1/chat/context?user_id=user_001&session_id=session_123
+```
+
+**응답:**
+```json
+{
+  "success": true,
+  "context": {
+    "user_id": "user_001",
+    "session_id": "session_123",
+    "user_name": "김철수",
+    "conversation_count": 5,
+    "last_interaction": "2024-01-01T12:00:00Z",
+    "robot_mood": "friendly",
+    "current_topic": "introduction",
+    "remembered_info": {
+      "user_preferences": ["친근한 대화", "간단한 설명"],
+      "recent_commands": ["앞으로 가줘", "돌아줘"]
+    }
+  }
+}
+```
+
+#### 4. 감정 상태 관리
+```http
+POST /api/v1/chat/emotion
+Content-Type: application/json
+
+{
+  "emotion": "happy",
+  "user_id": "user_001",
+  "reason": "사용자가 인사했음"
 }
 ```
 
 **응답:**
 ```json
 {
-  "message_id": "msg_123",
-  "response": "앞으로 이동합니다!",
-  "action": "move_forward",
+  "success": true,
+  "emotion_updated": "happy",
+  "led_expression": "happy",
+  "buzzer_sound": "success",
   "timestamp": "2024-01-01T12:00:00Z"
 }
 ```
@@ -535,6 +628,58 @@ GET /api/v1/learning/command-frequency
     "command_id": "cmd_123",
     "status": "success",
     "message": "이동 완료",
+    "timestamp": "2024-01-01T12:00:00Z"
+  }
+}
+```
+
+#### 채팅 상호작용 이벤트
+```json
+{
+  "event": "chat_message",
+  "data": {
+    "user_id": "user_001",
+    "session_id": "session_123",
+    "message_id": "msg_456",
+    "user_message": "안녕 덱스",
+    "robot_response": "안녕하세요! 저는 덱스에요. 당신은 누구신가요?",
+    "emotion_detected": "neutral",
+    "emotion_responded": "happy",
+    "conversation_type": "greeting",
+    "timestamp": "2024-01-01T12:00:00Z"
+  }
+}
+```
+
+#### 감정 상태 변경
+```json
+{
+  "event": "emotion_change",
+  "data": {
+    "user_id": "user_001",
+    "old_emotion": "neutral",
+    "new_emotion": "happy",
+    "reason": "사용자가 인사했음",
+    "led_expression": "happy",
+    "buzzer_sound": "success",
+    "timestamp": "2024-01-01T12:00:00Z"
+  }
+}
+```
+
+#### 대화 컨텍스트 업데이트
+```json
+{
+  "event": "context_update",
+  "data": {
+    "user_id": "user_001",
+    "session_id": "session_123",
+    "context_changes": {
+      "user_name": "김철수",
+      "conversation_count": 5,
+      "current_topic": "introduction",
+      "robot_mood": "friendly"
+    },
     "timestamp": "2024-01-01T12:00:00Z"
   }
 }
