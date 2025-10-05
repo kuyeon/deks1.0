@@ -3,6 +3,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 2rem;
+    width: 100%;
 }
 
 /* 통합 채팅 인터페이스 카드 */
@@ -13,8 +14,9 @@
 
 /* 로봇 제어 카드 - 전체 너비 차지 */
 .robot-control {
-    grid-column: 1 / -1; /* 모든 컬럼 차지 */
-    width: 100%;
+    grid-column: 1 / -1 !important; /* 모든 컬럼 차지 */
+    width: 100% !important;
+    max-width: none !important;
 }
 
 .chat-controls {
@@ -573,31 +575,68 @@ input:checked + .slider:before {
 
 .control-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); /* 동적 컬럼 수 */
+    grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
     width: 100%; /* 전체 너비 사용 */
-    max-width: none; /* 최대 너비 제한 제거 */
 }
 
-/* 버튼들을 자동으로 배치하되, 특별한 버튼들은 전체 너비 사용 */
+.control-grid .stop-btn {
+    grid-column: 2;
+    grid-row: 2;
+}
+
+.control-grid #moveForward {
+    grid-column: 2;
+    grid-row: 1;
+}
+
 .control-grid .special-btn {
-    grid-column: 1 / -1; /* 전체 너비 */
+    grid-column: 1 / -1;
+    grid-row: 3;
 }
 
-/* 기본 버튼들은 자동 배치되도록 설정 */
-.control-grid button:not(.special-btn) {
-    min-height: 60px; /* 최소 높이 설정 */
-}
-
-/* 반응형 디자인 - 작은 화면에서 더 작은 최소 너비 사용 */
+/* 반응형 디자인 - 작은 화면에서 우회전 버튼을 전진 버튼 오른쪽으로 */
 @media (max-width: 768px) {
     .control-grid {
-        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)) !important;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr 1fr !important;
+        grid-template-rows: repeat(3, auto) !important;
         gap: 0.5rem !important;
+        width: 100% !important;
     }
     
-    .control-grid button:not(.special-btn) {
-        min-height: 50px !important; /* 작은 화면에서 더 작은 높이 */
+    .control-grid #turnLeft {
+        grid-column: 1 !important;
+        grid-row: 1 !important;
+        min-width: 0 !important;
+        width: 100% !important;
+        flex: 1 !important;
+    }
+    
+    .control-grid #moveForward {
+        grid-column: 2 !important;
+        grid-row: 1 !important;
+        min-width: 0 !important;
+        width: 100% !important;
+        flex: 1 !important;
+    }
+    
+    .control-grid #turnRight {
+        grid-column: 3 !important;
+        grid-row: 1 !important;
+        min-width: 0 !important;
+        width: 100% !important;
+        flex: 1 !important;
+    }
+    
+    .control-grid .stop-btn {
+        grid-column: 2 !important;
+        grid-row: 2 !important;
+    }
+    
+    .control-grid .special-btn {
+        grid-column: 1 / -1 !important;
+        grid-row: 3 !important;
     }
 }
 
