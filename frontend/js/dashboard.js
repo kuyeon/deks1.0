@@ -182,13 +182,17 @@ class DeksDashboard {
      */
     async checkConnection() {
         try {
+            console.log('연결 상태 확인 시작...');
+            
             // HTTP API 연결 확인
             const response = await this.api.healthCheck();
             console.log('HTTP API 연결 상태 확인 성공:', response);
             
-            if (response.status === 'healthy') {
+            if (response && response.status === 'healthy') {
+                console.log('연결 상태: healthy 확인됨');
                 this.setConnectionStatus(true);
             } else {
+                console.log('연결 상태: healthy가 아님, response:', response);
                 this.setConnectionStatus(false);
             }
         } catch (error) {

@@ -191,9 +191,19 @@ class DeksAPI {
      */
     async healthCheck() {
         try {
+            console.log('healthCheck API 호출 시작...');
             const response = await fetch('http://localhost:8000/health');
-            return await response.json();
+            console.log('healthCheck 응답 상태:', response.status);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            console.log('healthCheck 응답 데이터:', data);
+            return data;
         } catch (error) {
+            console.error('healthCheck API 호출 실패:', error);
             throw error;
         }
     }
