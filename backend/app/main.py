@@ -150,15 +150,11 @@ async def root():
 async def health_check():
     """헬스 체크 엔드포인트"""
     try:
-        # Socket Bridge 상태 확인
-        socket_bridge = await get_socket_bridge()
-        bridge_status = await socket_bridge.health_check()
-        
         return {
             "status": "healthy",
             "service": "deks-backend",
             "version": settings.project_version,
-            "socket_bridge": bridge_status
+            "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
         logger.error(f"헬스 체크 실패: {e}")

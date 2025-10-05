@@ -140,7 +140,7 @@ class ChatService:
                 "buzzer_sound": "success"
             },
             "robot_turn": {
-                "keywords": ["돌아", "회전", "돌아줘", "회전해", "돌아서"],
+                "keywords": ["돌아", "회전", "돌아줘", "회전해", "돌아서", "오른쪽", "왼쪽", "좌회전", "우회전"],
                 "responses": [
                     "회전하겠습니다!",
                     "네! 돌아가겠어요.",
@@ -162,7 +162,7 @@ class ChatService:
                 "buzzer_sound": "info"
             },
             "robot_spin": {
-                "keywords": ["빙글빙글", "돌아", "회전", "빙글"],
+                "keywords": ["빙글빙글", "빙글", "회전해", "돌려"],
                 "responses": [
                     "빙글빙글 돌겠습니다!",
                     "네! 빙글빙글 돌아가겠어요.",
@@ -311,22 +311,28 @@ class ChatService:
         
         # 우선순위 기반 의도 분석 (더 구체적인 패턴을 먼저 확인)
         priority_intents = [
-            "farewell",      # 작별 인사 (우선순위 높음)
-            "introduction",  # 자기소개
-            "request_help",  # 도움 요청 (우선순위 높임)
+            "robot_spin",          # 로봇 빙글빙글 명령 (가장 구체적)
+            "robot_move_forward",  # 로봇 전진 명령
+            "robot_stop",          # 로봇 정지 명령
+            "robot_turn",          # 로봇 회전 명령 (가장 일반적)
+            "farewell",            # 작별 인사
+            "introduction",        # 자기소개
+            "request_help",        # 도움 요청
             "question_about_robot",  # 로봇에 대한 질문
             "question_capabilities", # 능력에 대한 질문
-            "praise",        # 칭찬
-            "compliment",    # 칭찬 (일반)
-            "confused",      # 혼란
-            "greeting"       # 인사 (우선순위 낮음)
+            "praise",              # 칭찬
+            "compliment",          # 칭찬 (일반)
+            "confused",            # 혼란
+            "greeting"             # 인사 (우선순위 낮음)
         ]
         
         # 우선순위 순서대로 의도 확인
         for intent in priority_intents:
             if intent in self.conversation_patterns:
                 pattern_data = self.conversation_patterns[intent]
-                for keyword in pattern_data["keywords"]:
+                # 키워드를 길이 순으로 정렬 (더 긴 키워드가 먼저 매칭되도록)
+                keywords = sorted(pattern_data["keywords"], key=len, reverse=True)
+                for keyword in keywords:
                     # 정확한 키워드 매칭 (부분 매칭보다 정확한 매칭 우선)
                     if keyword.lower() == message_lower:
                         return intent

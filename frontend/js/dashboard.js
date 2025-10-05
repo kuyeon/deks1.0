@@ -182,13 +182,33 @@ class DeksDashboard {
      */
     async checkConnection() {
         try {
+            // HTTP API 연결 확인
             const response = await this.api.healthCheck();
-            console.log('연결 상태 확인 성공:', response);
-            this.setConnectionStatus(true);
+            console.log('HTTP API 연결 상태 확인 성공:', response);
+            
+            // WebSocket 연결 상태도 확인
+            const wsConnected = this.checkWebSocketConnection();
+            
+            if (response.status === 'healthy' && wsConnected) {
+                this.setConnectionStatus(true);
+            } else {
+                this.setConnectionStatus(false);
+            }
         } catch (error) {
             console.error('연결 상태 확인 실패:', error);
             this.setConnectionStatus(false);
         }
+    }
+
+    /**
+     * WebSocket 연결 상태 확인
+     */
+    checkWebSocketConnection() {
+        // WebSocket 인스턴스가 있는지 확인
+        if (window.deksWebSocket && window.deksWebSocket.ws) {
+            return window.deksWebSocket.ws.readyState === WebSocket.OPEN;
+        }
+        return false;
     }
 
     /**
@@ -204,12 +224,12 @@ class DeksDashboard {
             statusElement.className = 'status-indicator connected';
             icon.className = 'fas fa-circle';
             text.textContent = '연결됨';
-            console.log('연결 상태: 연결됨');
+            console.log('연결 상태: 연결됨 (HTTP API + WebSocket)');
         } else {
             statusElement.className = 'status-indicator disconnected';
             icon.className = 'fas fa-circle';
-            text.textContent = '연결 끊김';
-            console.log('연결 상태: 연결 끊김');
+            text.textContent = '연결 중...';
+            console.log('연결 상태: 연결 중...');
         }
     }
 
