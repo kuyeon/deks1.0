@@ -320,8 +320,10 @@ class DeksAPI {
             method: 'POST',
             body: JSON.stringify({
                 user_id: this.userId,
-                session_id: this.sessionId,
-                ...interactionData
+                interaction_data: {
+                    session_id: this.sessionId,
+                    ...interactionData
+                }
             })
         });
     }
