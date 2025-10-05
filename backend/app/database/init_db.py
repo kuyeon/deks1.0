@@ -119,6 +119,91 @@ def create_tables():
             )
         """)
         
+        # 채팅 대화 테이블
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS chat_conversations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                conversation_id TEXT UNIQUE,
+                user_id TEXT NOT NULL,
+                session_id TEXT,
+                start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+                end_time DATETIME,
+                conversation_type TEXT,
+                total_messages INTEGER DEFAULT 0,
+                last_message_time DATETIME
+            )
+        """)
+        
+        # 채팅 메시지 테이블
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS chat_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                message_id TEXT UNIQUE,
+                conversation_id TEXT,
+                user_id TEXT NOT NULL,
+                session_id TEXT,
+                user_message TEXT NOT NULL,
+                robot_response TEXT NOT NULL,
+                emotion_detected TEXT,
+                emotion_responded TEXT,
+                conversation_type TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (conversation_id) REFERENCES chat_conversations(conversation_id)
+            )
+        """)
+        
+        # 사용자 프로필 테이블
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_profiles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT UNIQUE NOT NULL,
+                user_name TEXT,
+                preferred_style TEXT,
+                conversation_history_count INTEGER DEFAULT 0,
+                last_interaction DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # 채팅 컨텍스트 테이블
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS chat_contexts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                session_id TEXT,
+                user_name TEXT,
+                conversation_count INTEGER DEFAULT 0,
+                last_interaction DATETIME,
+                robot_mood TEXT DEFAULT 'friendly',
+                current_topic TEXT,
+                remembered_info TEXT,  -- JSON 형태로 저장
+                last_update DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, session_id)
+            )
+        """)
+        
+        # 감정 업데이트 테이블
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS emotion_updates (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                emotion TEXT NOT NULL,
+                reason TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # 학습 데이터 테이블
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS learning_data (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                interaction_data TEXT,  -- JSON 형태로 저장
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
         # 명령 실행 로그 테이블
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS command_execution_logs (

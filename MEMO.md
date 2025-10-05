@@ -120,7 +120,46 @@
   - WebSocket 테스트 클라이언트
   - Mock 객체 활용
 
-### 5. 실제 ESP32 하드웨어 연결 테스트
+### 5. Chat Interaction API - 로봇과의 대화형 상호작용
+**목표**: 사용자와 로봇 간의 자연스러운 대화 기능 구현
+
+**구현 내용**:
+- **대화 시스템**
+  - 인사말 인식 및 응답
+  - 자기소개 기능
+  - 사용자 질문에 대한 답변
+  - 상황별 맞춤 응답
+  - 대화 기록 관리
+
+- **대화 패턴 관리**
+  - 기본 대화 템플릿
+  - 감정 상태별 응답
+  - 사용자별 맞춤 대화 스타일
+  - 학습을 통한 응답 개선
+  - 대화 컨텍스트 유지
+
+- **자연어 처리 강화**
+  - 의도 분석 (인사, 질문, 명령, 대화)
+  - 감정 분석 및 반응
+  - 맥락 이해 및 응답 생성
+  - 동의어 및 변형 표현 처리
+  - 문맥 기반 답변 생성
+
+- **대화 시나리오**
+  - 첫 만남 시나리오
+  - 일상 대화 시나리오
+  - 도움 요청 시나리오
+  - 감정 표현 시나리오
+  - 작별 인사 시나리오
+
+- **API 엔드포인트**
+  - `/api/v1/chat/message` - 메시지 전송 및 응답
+  - `/api/v1/chat/history` - 대화 기록 조회
+  - `/api/v1/chat/context` - 대화 컨텍스트 관리
+  - `/api/v1/chat/emotion` - 감정 상태 관리
+  - `/api/v1/chat/learning` - 대화 패턴 학습
+
+### 6. 실제 ESP32 하드웨어 연결 테스트
 **목표**: 실제 하드웨어와의 연동 검증 및 최적화
 
 **구현 내용**:
@@ -161,14 +200,16 @@
 
 1. **Testing (4번)** - 코드 품질 보장이 우선
 2. **Error Handling (3번)** - 안정성 확보
-3. **Analytics API (1번)** - 사용자 경험 개선
-4. **Expression API (2번)** - 로봇 표현력 향상
-5. **ESP32 하드웨어 (5번)** - 실제 배포 준비
+3. **Chat Interaction API (5번)** - 사용자 상호작용 개선 (신규)
+4. **Analytics API (1번)** - 사용자 경험 개선
+5. **Expression API (2번)** - 로봇 표현력 향상
+6. **ESP32 하드웨어 (6번)** - 실제 배포 준비
 
 ## 기술 스택 및 도구
 
 - **Backend**: FastAPI, Python 3.9+, SQLite
 - **Testing**: pytest, FastAPI TestClient
+- **Chat/NLP**: spaCy, NLTK, transformers (선택사항)
 - **Hardware**: ESP32, Arduino IDE/PlatformIO
 - **Monitoring**: Loguru, Prometheus (선택사항)
 - **CI/CD**: GitHub Actions (선택사항)
