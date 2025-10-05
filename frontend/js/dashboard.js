@@ -182,9 +182,11 @@ class DeksDashboard {
      */
     async checkConnection() {
         try {
-            await this.api.healthCheck();
+            const response = await this.api.healthCheck();
+            console.log('연결 상태 확인 성공:', response);
             this.setConnectionStatus(true);
         } catch (error) {
+            console.error('연결 상태 확인 실패:', error);
             this.setConnectionStatus(false);
         }
     }
@@ -200,10 +202,14 @@ class DeksDashboard {
 
         if (connected) {
             statusElement.className = 'status-indicator connected';
+            icon.className = 'fas fa-circle';
             text.textContent = '연결됨';
+            console.log('연결 상태: 연결됨');
         } else {
             statusElement.className = 'status-indicator disconnected';
+            icon.className = 'fas fa-circle';
             text.textContent = '연결 끊김';
+            console.log('연결 상태: 연결 끊김');
         }
     }
 
@@ -491,6 +497,11 @@ class DeksDashboard {
                 }
             }
         }, 5000); // 5초마다 업데이트
+
+        // 10초마다 연결 상태 확인
+        this.connectionCheckInterval = setInterval(() => {
+            this.checkConnection();
+        }, 10000);
     }
 
     /**

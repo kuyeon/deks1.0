@@ -127,6 +127,50 @@ class ChatService:
                 "emotion": "excited",
                 "led_expression": "happy",
                 "buzzer_sound": "success"
+            },
+            "robot_move_forward": {
+                "keywords": ["앞으로", "전진", "가줘", "이동", "움직여"],
+                "responses": [
+                    "앞으로 이동하겠습니다!",
+                    "네! 앞으로 가겠어요.",
+                    "앞으로 이동할게요!"
+                ],
+                "emotion": "helpful",
+                "led_expression": "happy",
+                "buzzer_sound": "success"
+            },
+            "robot_turn": {
+                "keywords": ["돌아", "회전", "돌아줘", "회전해", "돌아서"],
+                "responses": [
+                    "회전하겠습니다!",
+                    "네! 돌아가겠어요.",
+                    "회전할게요!"
+                ],
+                "emotion": "helpful",
+                "led_expression": "happy",
+                "buzzer_sound": "success"
+            },
+            "robot_stop": {
+                "keywords": ["정지", "멈춰", "정지해줘", "멈춰줘", "스톱"],
+                "responses": [
+                    "정지하겠습니다!",
+                    "네! 멈추겠어요.",
+                    "정지할게요!"
+                ],
+                "emotion": "helpful",
+                "led_expression": "neutral",
+                "buzzer_sound": "info"
+            },
+            "robot_spin": {
+                "keywords": ["빙글빙글", "돌아", "회전", "빙글"],
+                "responses": [
+                    "빙글빙글 돌겠습니다!",
+                    "네! 빙글빙글 돌아가겠어요.",
+                    "빙글빙글 돌게요!"
+                ],
+                "emotion": "excited",
+                "led_expression": "happy",
+                "buzzer_sound": "success"
             }
         }
     
