@@ -68,17 +68,7 @@ class DeksDashboard {
             });
         }
 
-        // 추천 명령어 클릭 (이벤트 위임 사용)
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('suggestion-tag') && e.target.hasAttribute('data-command')) {
-                const command = e.target.getAttribute('data-command');
-                const commandInput = document.getElementById('commandInput');
-                if (commandInput) {
-                    commandInput.value = command;
-                    this.sendNaturalLanguageCommand();
-                }
-            }
-        });
+        // 추천 명령어 클릭 (이벤트 위임 사용) - 제거됨 (chat.js에서 통합 처리)
 
         // 파라미터 입력 필드 값 변경 및 검증
         const speedInput = document.getElementById('speedInput');
@@ -355,12 +345,22 @@ class DeksDashboard {
      * 스마트 제안 표시
      */
     displaySmartSuggestions(suggestions) {
+        // 스마트 제안은 별도 컨테이너에 표시하거나 기존 제안을 보완
+        // 기존 HTML 제안들을 유지하고 추가 제안만 표시
+        console.log('스마트 제안 로드됨:', suggestions);
+        
+        // 기존 제안들이 있는지 확인
+        const existingTags = document.querySelectorAll('.suggestion-tag');
+        if (existingTags.length > 0) {
+            console.log('기존 제안 태그 개수:', existingTags.length);
+            return; // 기존 제안이 있으면 스마트 제안을 덮어쓰지 않음
+        }
+        
         const container = document.querySelector('.suggestion-tags');
         if (!container) {
             console.warn('스마트 제안 컨테이너를 찾을 수 없습니다');
             return;
         }
-        container.innerHTML = '';
 
         const suggestionList = suggestions.suggestions || suggestions;
         
@@ -368,11 +368,7 @@ class DeksDashboard {
             const tag = document.createElement('span');
             tag.className = 'suggestion-tag';
             tag.textContent = suggestion.command || suggestion;
-            tag.setAttribute('data-command', suggestion.command || suggestion);
-            tag.addEventListener('click', () => {
-                document.getElementById('commandInput').value = suggestion.command || suggestion;
-                this.sendNaturalLanguageCommand();
-            });
+            tag.setAttribute('data-message', suggestion.command || suggestion); // data-message로 통일
             container.appendChild(tag);
         });
     }

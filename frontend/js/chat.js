@@ -42,6 +42,7 @@ class DeksChat {
         // 추천 메시지 클릭 (이벤트 위임 사용)
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('suggestion-tag') && e.target.hasAttribute('data-message')) {
+                console.log('제안 버튼 클릭됨:', e.target.textContent);
                 const message = e.target.getAttribute('data-message');
                 this.chatInput.value = message;
                 this.sendMessage();
