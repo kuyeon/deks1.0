@@ -115,6 +115,7 @@ def test_improved_patterns():
                         print(f"✅ 이름 추출 성공: {expected_name}")
                     else:
                         print(f"❌ 이름 추출 실패: {expected_name}이 응답에 없음")
+                        print(f"   실제 응답: {actual_response}")
                 
                 print(f"   응답: {actual_response}")
                 print(f"   감정: {data['emotion']}")

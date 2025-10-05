@@ -236,9 +236,9 @@ class ChatService:
         priority_intents = [
             "farewell",      # 작별 인사 (우선순위 높음)
             "introduction",  # 자기소개
+            "request_help",  # 도움 요청 (우선순위 높임)
             "question_about_robot",  # 로봇에 대한 질문
             "question_capabilities", # 능력에 대한 질문
-            "request_help",  # 도움 요청
             "praise",        # 칭찬
             "compliment",    # 칭찬 (일반)
             "confused",      # 혼란
@@ -292,20 +292,31 @@ class ChatService:
             # 랜덤 응답 선택
             response_text = random.choice(responses)
             
-            # 사용자 이름 치환
-            if user_name and "{user_name}" in response_text:
+            # 사용자 이름 치환 (자기소개가 아닌 경우에만)
+            if user_name and "{user_name}" in response_text and intent != "introduction":
                 response_text = response_text.format(user_name=user_name)
             
-            # 이름 추출 (자기소개인 경우)
+            # 이름 추출 및 치환 (자기소개인 경우)
             if intent == "introduction":
                 extracted_name = self._extract_name(message)
                 if extracted_name:
                     # 기존 사용자 이름이 없거나 추출된 이름이 더 구체적일 때 업데이트
                     if not user_name or len(extracted_name) > 1:
                         user_name = extracted_name
+                    # 모든 {user_name} 치환
                     response_text = response_text.replace("{user_name}", extracted_name)
                 elif user_name:
                     response_text = response_text.replace("{user_name}", user_name)
+                else:
+                    # 이름이 없으면 기본값 사용
+                    response_text = response_text.replace("{user_name}", "")
+            
+            # 다른 의도에서도 {user_name} 치환 처리
+            if "{user_name}" in response_text:
+                if user_name:
+                    response_text = response_text.replace("{user_name}", user_name)
+                else:
+                    response_text = response_text.replace("{user_name}", "")
             
             return {
                 "text": response_text,
@@ -331,17 +342,15 @@ class ChatService:
             r"나는\s+([가-힣]{2,10})\s*야",
             # "내 이름은 김철수야" 형태  
             r"내\s+이름은\s+([가-힣]{2,10})\s*야",
-            # "내 이름은 김철수입니다" 형태
-            r"내\s+이름은\s+([가-힣]{2,10})\s*입니다",
-            # "내 이름은 김철수입니다" 형태 (더 정확한 매칭)
+            # "내 이름은 김철수입니다" 형태 (정확한 매칭)
             r"내\s+이름은\s+([가-힣]{2,10})입니다",
             # "내 이름은 김철수" 형태 (끝에 공백이나 구두점)
             r"내\s+이름은\s+([가-힣]{2,10})(?:\s|$)",
             # "저는 김철수입니다" 형태
-            r"저는\s+([가-힣]{2,10})\s*입니다",
+            r"저는\s+([가-힣]{2,10})입니다",
             # "저는 김철수야" 형태
             r"저는\s+([가-힣]{2,10})\s*야",
-            # "저는 김철수" 형태 (끝에 공백이나 구두점)
+            # "저는 김철수" 형태 (끝에 공백이나 구두점) - 가장 중요!
             r"저는\s+([가-힣]{2,10})(?:\s|$)",
             # "내가 김철수야" 형태
             r"내가\s+([가-힣]{2,10})\s*야",
