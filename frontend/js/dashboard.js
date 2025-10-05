@@ -51,41 +51,53 @@ class DeksDashboard {
             this.executeCommand('spin');
         });
 
-        // 자연어 명령 입력
-        document.getElementById('commandInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.sendNaturalLanguageCommand();
-            }
-        });
+        // 자연어 명령 입력 (요소가 존재하는 경우에만)
+        const commandInput = document.getElementById('commandInput');
+        if (commandInput) {
+            commandInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.sendNaturalLanguageCommand();
+                }
+            });
+        }
 
-        document.getElementById('sendCommand').addEventListener('click', () => {
-            this.sendNaturalLanguageCommand();
-        });
+        const sendCommand = document.getElementById('sendCommand');
+        if (sendCommand) {
+            sendCommand.addEventListener('click', () => {
+                this.sendNaturalLanguageCommand();
+            });
+        }
 
         // 추천 명령어 클릭
         document.querySelectorAll('.suggestion-tag').forEach(tag => {
             tag.addEventListener('click', () => {
                 const command = tag.getAttribute('data-command');
-                document.getElementById('commandInput').value = command;
-                this.sendNaturalLanguageCommand();
+                const commandInput = document.getElementById('commandInput');
+                if (commandInput) {
+                    commandInput.value = command;
+                    this.sendNaturalLanguageCommand();
+                }
             });
         });
 
         // 파라미터 입력 필드 값 변경 및 검증
-        document.getElementById('speedInput').addEventListener('input', (e) => {
-            let value = parseInt(e.target.value);
-            // 빈 값이나 NaN은 허용 (사용자가 입력 중일 수 있음)
-            if (isNaN(value)) return;
-            
-            // 범위 초과 시 경고 메시지
-            if (value < 0) {
-                this.showToast('속도는 0 이상이어야 합니다.', 'error');
-                e.target.value = 0;
-            } else if (value > 100) {
-                this.showToast('속도는 100 이하여야 합니다.', 'error');
-                e.target.value = 100;
-            }
-        });
+        const speedInput = document.getElementById('speedInput');
+        if (speedInput) {
+            speedInput.addEventListener('input', (e) => {
+                let value = parseInt(e.target.value);
+                // 빈 값이나 NaN은 허용 (사용자가 입력 중일 수 있음)
+                if (isNaN(value)) return;
+                
+                // 범위 초과 시 경고 메시지
+                if (value < 0) {
+                    this.showToast('속도는 0 이상이어야 합니다.', 'error');
+                    e.target.value = 0;
+                } else if (value > 100) {
+                    this.showToast('속도는 100 이하여야 합니다.', 'error');
+                    e.target.value = 100;
+                }
+            });
+        }
 
         document.getElementById('distanceInput').addEventListener('input', (e) => {
             let value = parseInt(e.target.value);
@@ -188,17 +200,35 @@ class DeksDashboard {
             const response = await this.api.healthCheck();
             console.log('HTTP API 연결 상태 확인 성공:', response);
             
-            if (response && response.status === 'healthy') {
-                console.log('연결 상태: healthy 확인됨');
+            // WebSocket 연결 상태도 확인
+            const wsConnected = this.checkWebSocketConnection();
+            console.log('WebSocket 연결 상태:', wsConnected);
+            
+            if (response && response.status === 'healthy' && wsConnected) {
+                console.log('연결 상태: healthy + WebSocket 연결됨');
                 this.setConnectionStatus(true);
             } else {
-                console.log('연결 상태: healthy가 아님, response:', response);
+                console.log('연결 상태: 일부 연결 실패 - HTTP:', response?.status, 'WebSocket:', wsConnected);
                 this.setConnectionStatus(false);
             }
         } catch (error) {
             console.error('연결 상태 확인 실패:', error);
             this.setConnectionStatus(false);
         }
+    }
+
+    /**
+     * WebSocket 연결 상태 확인
+     */
+    checkWebSocketConnection() {
+        // WebSocket 인스턴스가 있는지 확인
+        if (window.deksWebSocket && window.deksWebSocket.ws) {
+            const isOpen = window.deksWebSocket.ws.readyState === WebSocket.OPEN;
+            console.log('WebSocket readyState:', window.deksWebSocket.ws.readyState, 'OPEN:', WebSocket.OPEN);
+            return isOpen;
+        }
+        console.log('WebSocket 인스턴스 없음');
+        return false;
     }
 
     /**
