@@ -224,7 +224,7 @@ class DeksDashboard {
         // WebSocket 인스턴스가 있는지 확인
         if (window.deksWebSocket && window.deksWebSocket.ws) {
             const isOpen = window.deksWebSocket.ws.readyState === WebSocket.OPEN;
-            console.log('WebSocket readyState:', window.deksWebSocket.ws.readyState, 'OPEN:', WebSocket.OPEN);
+            console.log('WebSocket readyState:', window.deksWebSocket.ws.readyState, 'OPEN:', WebSocket.OPEN, 'isOpen:', isOpen);
             return isOpen;
         }
         console.log('WebSocket 인스턴스 없음');
@@ -355,7 +355,11 @@ class DeksDashboard {
      * 스마트 제안 표시
      */
     displaySmartSuggestions(suggestions) {
-        const container = document.getElementById('suggestionTags');
+        const container = document.querySelector('.suggestion-tags');
+        if (!container) {
+            console.warn('스마트 제안 컨테이너를 찾을 수 없습니다');
+            return;
+        }
         container.innerHTML = '';
 
         const suggestionList = suggestions.suggestions || suggestions;
