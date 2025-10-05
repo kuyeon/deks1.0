@@ -316,7 +316,7 @@ class DeksAPI {
      * 대화 패턴 학습 데이터 제출
      */
     async submitLearningData(interactionData) {
-        return this.request('/chat/learn', {
+        return this.request('/chat/learning', {
             method: 'POST',
             body: JSON.stringify({
                 user_id: this.userId,

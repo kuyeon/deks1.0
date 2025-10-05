@@ -246,13 +246,13 @@ class DeksChat {
                 'happy': 'success',
                 'excited': 'success',
                 'proud': 'success',
-                'curious': 'info',
+                'curious': 'beep',
                 'confused': 'error',
-                'bittersweet': 'farewell',
-                'helpful': 'info'
+                'bittersweet': 'melody',
+                'helpful': 'beep'
             };
 
-            const buzzerSound = buzzerSounds[emotion] || 'info';
+            const buzzerSound = buzzerSounds[emotion] || 'beep';
             await window.deksAPI.setBuzzerSound(buzzerSound, 1000, 300);
 
         } catch (error) {
