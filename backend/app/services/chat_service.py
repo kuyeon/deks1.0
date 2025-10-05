@@ -10,6 +10,7 @@ from typing import Dict, List, Optional, Any
 from loguru import logger
 
 from app.database.database_manager import db_manager
+from app.services.chat_nlp import ChatNLP, IntentType, EmotionType
 
 
 class ChatService:
@@ -18,6 +19,12 @@ class ChatService:
     def __init__(self):
         self.conversation_patterns = self._init_conversation_patterns()
         self.emotion_states = self._init_emotion_states()
+        try:
+            self.nlp = ChatNLP()  # NLP 모듈 초기화
+            logger.info("NLP 모듈 초기화 성공")
+        except Exception as e:
+            logger.error("NLP 모듈 초기화 실패: %s", e)
+            self.nlp = None
     
     def _init_conversation_patterns(self) -> Dict[str, Dict[str, Any]]:
         """대화 패턴 초기화"""
@@ -184,11 +191,23 @@ class ChatService:
             # 메시지 ID 생성
             message_id = str(uuid.uuid4())
             
-            # 의도 분석
-            intent = self._analyze_intent(message)
-            
-            # 감정 분석
-            emotion = self._analyze_emotion(message, intent)
+            # NLP 분석 수행
+            if self.nlp:
+                try:
+                    nlp_analysis = self.nlp.analyze_text(message)
+                    # 기존 패턴 기반 분석과 NLP 분석 결과 결합
+                    intent = self._combine_intent_analysis(message, nlp_analysis)
+                    emotion = self._combine_emotion_analysis(message, intent, nlp_analysis)
+                except Exception as e:
+                    logger.error("NLP 분석 실패, 기본 분석 사용: %s", e)
+                    intent = self._analyze_intent(message)
+                    emotion = self._analyze_emotion(message, intent)
+                    nlp_analysis = None
+            else:
+                # NLP 모듈이 없으면 기존 방식 사용
+                intent = self._analyze_intent(message)
+                emotion = self._analyze_emotion(message, intent)
+                nlp_analysis = None
             
             # 컨텍스트 조회
             context = await self.get_chat_context(user_id, session_id)
@@ -211,7 +230,7 @@ class ChatService:
             # 컨텍스트 업데이트
             await self._update_context(user_id, session_id, intent, response)
             
-            return {
+            result = {
                 "message_id": message_id,
                 "response": response["text"],
                 "emotion": response["emotion"],
@@ -223,6 +242,20 @@ class ChatService:
                     "follow_up": response.get("follow_up")
                 }
             }
+            
+            # NLP 분석 데이터가 있으면 추가
+            if nlp_analysis and self.nlp:
+                result["nlp_analysis"] = {
+                    "intent_confidence": nlp_analysis.intent.confidence,
+                    "emotion_confidence": nlp_analysis.emotion.confidence,
+                    "sentiment_score": nlp_analysis.emotion.sentiment_score,
+                    "keywords": nlp_analysis.keywords,
+                    "entities": nlp_analysis.entities,
+                    "is_question": self.nlp.is_question(message),
+                    "question_type": self.nlp.extract_question_type(message)
+                }
+            
+            return result
             
         except Exception as e:
             logger.error(f"메시지 처리 실패: {e}")
@@ -388,6 +421,49 @@ class ChatService:
         }
         
         return follow_ups.get(intent)
+    
+    def _combine_intent_analysis(self, message: str, nlp_analysis) -> str:
+        """기존 패턴 기반 분석과 NLP 분석 결과를 결합합니다."""
+        # NLP 분석 결과를 우선으로 하되, 신뢰도가 낮으면 기존 패턴 사용
+        if nlp_analysis.intent.confidence > 0.7:
+            # NLP 결과를 문자열로 변환
+            intent_mapping = {
+                IntentType.GREETING: "greeting",
+                IntentType.INTRODUCTION: "introduction", 
+                IntentType.QUESTION_ABOUT_ROBOT: "question_about_robot",
+                IntentType.QUESTION_CAPABILITIES: "question_capabilities",
+                IntentType.REQUEST_HELP: "request_help",
+                IntentType.PRAISE: "praise",
+                IntentType.COMPLIMENT: "compliment",
+                IntentType.FAREWELL: "farewell",
+                IntentType.CONFUSED: "confused",
+                IntentType.UNKNOWN: "unknown"
+            }
+            return intent_mapping.get(nlp_analysis.intent.intent, "unknown")
+        else:
+            # 기존 패턴 기반 분석 사용
+            return self._analyze_intent(message)
+    
+    def _combine_emotion_analysis(self, message: str, intent: str, nlp_analysis) -> str:
+        """기존 패턴 기반 분석과 NLP 분석 결과를 결합합니다."""
+        # NLP 분석 결과를 우선으로 하되, 신뢰도가 낮으면 기존 패턴 사용
+        if nlp_analysis.emotion.confidence > 0.6:
+            # NLP 결과를 문자열로 변환
+            emotion_mapping = {
+                EmotionType.HAPPY: "happy",
+                EmotionType.EXCITED: "excited",
+                EmotionType.CURIOUS: "curious", 
+                EmotionType.PROUD: "proud",
+                EmotionType.HELPFUL: "helpful",
+                EmotionType.CONFUSED: "confused",
+                EmotionType.SAD: "sad",
+                EmotionType.NEUTRAL: "neutral",
+                EmotionType.BITTERSWEET: "bittersweet"
+            }
+            return emotion_mapping.get(nlp_analysis.emotion.emotion, "neutral")
+        else:
+            # 기존 패턴 기반 분석 사용
+            return self._analyze_emotion(message, intent)
     
     async def get_chat_history(self, user_id: str, limit: int = 20, offset: int = 0) -> List[Dict[str, Any]]:
         """채팅 기록을 조회합니다."""
