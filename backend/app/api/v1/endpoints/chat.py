@@ -36,6 +36,7 @@ class ChatMessageResponse(BaseModel):
     conversation_type: str
     timestamp: str
     context: Optional[Dict[str, Any]] = None
+    nlp_analysis: Optional[Dict[str, Any]] = None
 
 
 class ChatHistoryResponse(BaseModel):
@@ -107,7 +108,8 @@ async def send_chat_message(request: ChatMessageRequest):
             emotion=response_data["emotion"],
             conversation_type=response_data["conversation_type"],
             timestamp=response_data["timestamp"],
-            context=response_data.get("context")
+            context=response_data.get("context"),
+            nlp_analysis=response_data.get("nlp_analysis")
         )
         
     except Exception as e:
