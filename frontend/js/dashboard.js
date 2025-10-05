@@ -68,16 +68,16 @@ class DeksDashboard {
             });
         }
 
-        // 추천 명령어 클릭
-        document.querySelectorAll('.suggestion-tag').forEach(tag => {
-            tag.addEventListener('click', () => {
-                const command = tag.getAttribute('data-command');
+        // 추천 명령어 클릭 (이벤트 위임 사용)
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('suggestion-tag') && e.target.hasAttribute('data-command')) {
+                const command = e.target.getAttribute('data-command');
                 const commandInput = document.getElementById('commandInput');
                 if (commandInput) {
                     commandInput.value = command;
                     this.sendNaturalLanguageCommand();
                 }
-            });
+            }
         });
 
         // 파라미터 입력 필드 값 변경 및 검증

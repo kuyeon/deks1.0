@@ -21,7 +21,6 @@ class DeksChat {
         this.chatInput = document.getElementById('chatInput');
         this.chatSendBtn = document.getElementById('chatSendBtn');
         this.clearChatBtn = document.getElementById('clearChat');
-        this.suggestionTags = document.querySelectorAll('.suggestion-tag');
     }
 
     /**
@@ -40,13 +39,13 @@ class DeksChat {
         // 채팅 제어
         this.clearChatBtn.addEventListener('click', () => this.clearChat());
 
-        // 추천 메시지 클릭
-        this.suggestionTags.forEach(suggestion => {
-            suggestion.addEventListener('click', () => {
-                const message = suggestion.getAttribute('data-message');
+        // 추천 메시지 클릭 (이벤트 위임 사용)
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('suggestion-tag') && e.target.hasAttribute('data-message')) {
+                const message = e.target.getAttribute('data-message');
                 this.chatInput.value = message;
                 this.sendMessage();
-            });
+            }
         });
 
         // 입력 필드 포커스
