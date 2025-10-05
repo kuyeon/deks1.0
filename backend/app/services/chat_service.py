@@ -69,7 +69,7 @@ class ChatService:
                     "저는 이동하고 센서로 주변을 감지할 수 있어요. 명령을 내려보세요!",
                     "저는 움직일 수 있고 주변을 탐지할 수 있어요. 무엇을 도와드릴까요?"
                 ],
-                "emotion": "proud",
+                "emotion": "excited",
                 "led_expression": "happy",
                 "buzzer_sound": "success"
             },
@@ -124,7 +124,7 @@ class ChatService:
                     "칭찬해 주셔서 감사해요. 더 열심히 할게요!",
                     "정말 좋아요! 언제든지 도와드릴게요."
                 ],
-                "emotion": "proud",
+                "emotion": "excited",
                 "led_expression": "happy",
                 "buzzer_sound": "success"
             }
