@@ -138,7 +138,7 @@ LOG_FILE=logs/deks.log
 
 ## 🧪 테스트
 
-### 전체 테스트: 284개 (95% 통과율)
+### 전체 테스트: 305개 (96% 통과율)
 
 ```bash
 # 전체 테스트 실행
@@ -148,6 +148,7 @@ pytest tests/ -v
 pytest tests/test_chat_nlp.py -v                    # NLP (48개)
 pytest tests/test_error_handling.py -v              # 에러 처리 (25개)
 pytest tests/test_chat_interaction_enhanced.py -v   # 강화된 대화 (39개)
+pytest tests/test_analytics.py -v                   # Analytics (21개)
 
 # 커버리지 포함 테스트
 pytest --cov=app tests/
@@ -157,6 +158,7 @@ pytest --cov=app tests/
 - ✅ **1순위**: Testing (200개 테스트, 91% 통과율)
 - ✅ **2순위**: Error Handling (25개 테스트, 100% 통과)
 - ✅ **3순위**: Chat Interaction Enhanced (39개 테스트, 100% 통과)
+- ✅ **4순위**: Analytics API (21개 테스트, 100% 통과)
 
 ## 📝 개발 가이드
 
