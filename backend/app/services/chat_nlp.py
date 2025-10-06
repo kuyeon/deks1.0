@@ -497,6 +497,7 @@ class ChatNLP:
         
         text_lower = text.lower().strip()
         
+        # 더 구체적인 패턴으로 개선
         if re.search(r".*뭐야.*|.*뭐.*", text_lower):
             return "what"
         elif re.search(r".*어떻게.*", text_lower):
@@ -507,7 +508,7 @@ class ChatNLP:
             return "when"
         elif re.search(r".*어디.*", text_lower):
             return "where"
-        elif re.search(r".*누구.*", text_lower):
+        elif re.search(r".*누구.*|.*누가.*", text_lower):  # 누가 패턴 추가
             return "who"
         else:
             return "general"
