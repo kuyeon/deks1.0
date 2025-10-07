@@ -1,13 +1,16 @@
 """
 사용자 분석 및 패턴 학습 API 엔드포인트
+4순위 작업: Analytics API 구현
 """
 
-from fastapi import APIRouter, HTTPException, Query
-from typing import List, Optional
-from pydantic import BaseModel
+from fastapi import APIRouter, Query
+from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, Field
+from datetime import datetime
 from loguru import logger
 
 from app.database.database_manager import db_manager
+from app.services.analytics_service import get_analytics_service
 
 router = APIRouter()
 
@@ -64,131 +67,231 @@ class FeedbackRequest(BaseModel):
 @router.get("/user-patterns")
 async def get_user_patterns(
     user_id: str = Query(..., description="사용자 ID"),
-    days: int = Query(default=7, description="분석 기간 (일)")
+    days: int = Query(default=7, ge=1, le=365, description="분석 기간 (일)")
 ):
     """사용자 패턴을 분석합니다."""
-    try:
-        logger.info(f"사용자 패턴 분석 요청: {user_id} ({days}일)")
-        
-        # 데이터베이스에서 사용자 패턴 분석
-        pattern_data = db_manager.get_user_patterns(user_id, days)
-        
-        # 시간대 분석 (현재는 기본값, 향후 구현)
-        preferred_time_slots = ["morning", "evening"]
-        
-        # 에러 패턴에 제안 추가
-        common_error_patterns = []
-        for error_pattern in pattern_data.get('error_patterns', []):
-            if error_pattern['error_type'] == 'unknown_command':
-                common_error_patterns.append({
-                    "error_type": error_pattern['error_type'],
-                    "frequency": error_pattern['frequency'],
-                    "suggestions": ["앞으로 가줘", "정지해줘", "오른쪽으로 돌아줘"]
-                })
-            else:
-                common_error_patterns.append({
-                    "error_type": error_pattern['error_type'],
-                    "frequency": error_pattern['frequency'],
-                    "suggestions": []
-                })
-        
-        return {
-            "success": True,
-            "user_id": user_id,
-            "analysis_period": pattern_data.get('analysis_period', f"{days}_days"),
-            "frequent_commands": pattern_data.get('frequent_commands', []),
-            "preferred_time_slots": preferred_time_slots,
-            "common_error_patterns": common_error_patterns,
-            "timestamp": "2024-01-01T12:00:00Z"
-        }
-        
-    except Exception as e:
-        logger.error(f"사용자 패턴 분석 중 오류: {e}")
-        raise HTTPException(status_code=500, detail=f"사용자 패턴 분석 실패: {str(e)}")
+    logger.info(f"사용자 패턴 분석 요청: {user_id} ({days}일)")
+    
+    analytics_service = await get_analytics_service()
+    
+    # 사용자 행동 분석
+    behavior_profile = await analytics_service.analyze_user_behavior(user_id, days)
+    
+    # 명령 빈도 분석
+    command_frequencies = await analytics_service.get_command_frequency_analysis(user_id, limit=10)
+    
+    # 시간대별 패턴 분석
+    time_patterns = await analytics_service.analyze_time_slot_patterns(user_id, days)
+    
+    # 에러 패턴 분석
+    error_patterns = await analytics_service.analyze_error_patterns(user_id, days)
+    
+    return {
+        "success": True,
+        "user_id": user_id,
+        "analysis_period": f"{days}_days",
+        "behavior_profile": {
+            "total_interactions": behavior_profile.total_interactions,
+            "total_commands": behavior_profile.total_commands,
+            "success_rate": behavior_profile.command_success_rate,
+            "learning_level": behavior_profile.learning_level,
+            "most_active_time": behavior_profile.most_active_time_slot,
+            "avg_session_duration": behavior_profile.avg_session_duration
+        },
+        "frequent_commands": [
+            {
+                "command": freq.command,
+                "frequency": freq.count,
+                "success_rate": freq.success_rate
+            }
+            for freq in command_frequencies
+        ],
+        "time_slot_patterns": [
+            {
+                "time_slot": pattern.time_slot,
+                "command_count": pattern.command_count,
+                "most_common_command": pattern.most_common_command
+            }
+            for pattern in time_patterns
+        ],
+        "error_patterns": error_patterns,
+        "timestamp": datetime.now().isoformat()
+    }
 
 
 @router.get("/suggestions", response_model=SmartSuggestionsResponse)
 async def get_smart_suggestions(
     user_id: str = Query(..., description="사용자 ID"),
-    context: str = Query(default="idle", description="상황 컨텍스트")
+    context: str = Query(default="idle", description="상황 컨텍스트"),
+    limit: int = Query(default=5, ge=1, le=10, description="제안 개수")
 ):
     """스마트 제안을 제공합니다."""
-    try:
-        logger.info(f"스마트 제안 요청: {user_id} (컨텍스트: {context})")
-        
-        # TODO: 사용자 패턴과 현재 상황을 기반으로 제안 생성
-        # 실제 구현 시 머신러닝 또는 규칙 기반 시스템 사용
-        
-        suggestions = [
-            {
-                "command": "앞으로 가줘",
-                "confidence": 0.85,
-                "reason": "자주 사용하는 명령어입니다"
-            },
-            {
-                "command": "빙글빙글 돌아줘",
-                "confidence": 0.72,
-                "reason": "이 시간대에 자주 사용합니다"
-            }
-        ]
-        
-        return SmartSuggestionsResponse(
-            user_id=user_id,
-            context=context,
-            suggestions=suggestions,
-            timestamp="2024-01-01T12:00:00Z"
-        )
-        
-    except Exception as e:
-        logger.error(f"스마트 제안 생성 중 오류: {e}")
-        raise HTTPException(status_code=500, detail=f"스마트 제안 생성 실패: {str(e)}")
+    logger.info(f"스마트 제안 요청: {user_id} (컨텍스트: {context})")
+    
+    analytics_service = await get_analytics_service()
+    
+    # 스마트 제안 생성 (빈도, 시간대, 에러 방지, 시퀀스 기반)
+    suggestions = await analytics_service.generate_smart_suggestions(
+        user_id=user_id,
+        context=context,
+        limit=limit
+    )
+    
+    return SmartSuggestionsResponse(
+        user_id=user_id,
+        context=context,
+        suggestions=[
+            Suggestion(
+                command=sug.command,
+                confidence=sug.confidence,
+                reason=sug.reason
+            )
+            for sug in suggestions
+        ],
+        timestamp=datetime.now().isoformat()
+    )
 
 
 @router.post("/feedback")
 async def submit_feedback(request: FeedbackRequest):
     """사용자 피드백을 제출합니다."""
-    try:
-        logger.info(f"피드백 제출: {request.user_id} - 만족도: {request.satisfaction}")
-        
-        # TODO: 데이터베이스에 피드백 저장
-        # 실제 구현 시 SQLite에 피드백 데이터 저장
-        
-        return {
-            "success": True,
-            "message": "피드백이 성공적으로 제출되었습니다",
-            "feedback_id": f"fb_{hash(str(request)) % 10000}",
-            "timestamp": "2024-01-01T12:00:00Z"
-        }
-        
-    except Exception as e:
-        logger.error(f"피드백 제출 중 오류: {e}")
-        raise HTTPException(status_code=500, detail=f"피드백 제출 실패: {str(e)}")
+    logger.info(f"피드백 제출: {request.user_id} - 만족도: {request.satisfaction}")
+    
+    # 피드백 데이터베이스에 저장
+    feedback_id = f"fb_{datetime.now().timestamp():.0f}"
+    
+    query = """
+    INSERT INTO user_feedback 
+    (feedback_id, user_id, command_id, satisfaction, feedback, timestamp)
+    VALUES (?, ?, ?, ?, ?, ?)
+    """
+    
+    db_manager.execute_query(query, (
+        feedback_id,
+        request.user_id,
+        request.command_id,
+        request.satisfaction,
+        request.feedback,
+        request.timestamp or datetime.now().isoformat()
+    ))
+    
+    logger.info(f"피드백 저장 완료: {feedback_id}")
+    
+    return {
+        "success": True,
+        "message": "피드백이 성공적으로 제출되었습니다",
+        "feedback_id": feedback_id,
+        "timestamp": datetime.now().isoformat()
+    }
 
 
 @router.get("/statistics")
 async def get_analytics_statistics():
     """전체 분석 통계를 조회합니다."""
-    try:
-        logger.info("분석 통계 조회 요청")
+    logger.info("분석 통계 조회 요청")
+    
+    analytics_service = await get_analytics_service()
+    
+    # 전체 시스템 통계 조회
+    global_stats = await analytics_service.get_global_statistics()
+    
+    return {
+        "success": True,
+        "statistics": global_stats,
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@router.get("/user-stats/{user_id}")
+async def get_user_statistics(
+    user_id: str,
+    include_details: bool = Query(default=False, description="상세 정보 포함 여부")
+):
+    """특정 사용자의 상세 통계를 조회합니다."""
+    logger.info(f"사용자 통계 조회: {user_id}")
+    
+    analytics_service = await get_analytics_service()
+    
+    # 사용자 통계
+    user_stats = await analytics_service.get_user_statistics(user_id)
+    
+    result = {
+        "success": True,
+        "user_stats": user_stats,
+        "timestamp": datetime.now().isoformat()
+    }
+    
+    # 상세 정보 포함
+    if include_details:
+        command_frequencies = await analytics_service.get_command_frequency_analysis(
+            user_id, limit=5
+        )
         
-        # TODO: 데이터베이스에서 전체 통계 계산
-        
-        return {
-            "success": True,
-            "statistics": {
-                "total_users": 1,
-                "total_commands": 156,
-                "success_rate": 0.89,
-                "most_popular_command": "앞으로 가줘",
-                "avg_session_duration": "5.2 minutes",
-                "error_rate": 0.11
-            },
-            "timestamp": "2024-01-01T12:00:00Z"
-        }
-        
-    except Exception as e:
-        logger.error(f"분석 통계 조회 중 오류: {e}")
-        raise HTTPException(status_code=500, detail=f"분석 통계 조회 실패: {str(e)}")
+        result["command_frequencies"] = [
+            {
+                "command": freq.command,
+                "count": freq.count,
+                "success_rate": freq.success_rate
+            }
+            for freq in command_frequencies
+        ]
+    
+    return result
+
+
+@router.get("/command-frequency")
+async def get_command_frequency(
+    user_id: str = Query(..., description="사용자 ID"),
+    limit: int = Query(default=10, ge=1, le=50, description="결과 개수")
+):
+    """명령 빈도를 조회합니다."""
+    logger.info(f"명령 빈도 조회: {user_id}")
+    
+    analytics_service = await get_analytics_service()
+    
+    frequencies = await analytics_service.get_command_frequency_analysis(
+        user_id, limit
+    )
+    
+    return {
+        "success": True,
+        "user_id": user_id,
+        "command_frequencies": [
+            {
+                "command": freq.command,
+                "count": freq.count,
+                "success_count": freq.success_count,
+                "failure_count": freq.failure_count,
+                "success_rate": freq.success_rate,
+                "last_used": freq.last_used.isoformat(),
+                "avg_execution_time": freq.avg_execution_time
+            }
+            for freq in frequencies
+        ],
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@router.get("/error-patterns")
+async def get_error_patterns(
+    user_id: Optional[str] = Query(None, description="사용자 ID (선택)"),
+    days: int = Query(default=7, ge=1, le=90, description="분석 기간")
+):
+    """에러 패턴을 분석합니다."""
+    logger.info(f"에러 패턴 분석: user_id={user_id}, days={days}")
+    
+    analytics_service = await get_analytics_service()
+    
+    error_patterns = await analytics_service.analyze_error_patterns(user_id, days)
+    
+    return {
+        "success": True,
+        "user_id": user_id or "all",
+        "analysis_period": f"{days}_days",
+        "error_patterns": error_patterns,
+        "total_errors": sum(p['frequency'] for p in error_patterns),
+        "timestamp": datetime.now().isoformat()
+    }
 
 
 @router.get("/health")

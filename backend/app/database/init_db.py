@@ -222,6 +222,20 @@ def create_tables():
             )
         """)
         
+        # 사용자 피드백 테이블 (4순위: Analytics API)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_feedback (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                feedback_id TEXT UNIQUE NOT NULL,
+                user_id TEXT NOT NULL,
+                command_id TEXT,
+                satisfaction INTEGER CHECK(satisfaction >= 1 AND satisfaction <= 5),
+                feedback TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                processed BOOLEAN DEFAULT 0
+            )
+        """)
+        
         # 명령 실행 로그 테이블
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS command_execution_logs (
@@ -244,9 +258,12 @@ def create_tables():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_robot_states_timestamp ON robot_states(timestamp)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sensor_data_timestamp ON sensor_data(timestamp)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_command_execution_logs_timestamp ON command_execution_logs(timestamp)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_command_execution_logs_user_id ON command_execution_logs(user_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_messages_user_id ON chat_messages(user_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_long_term_memory_user_id ON user_long_term_memory(user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_feedback_user_id ON user_feedback(user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_feedback_timestamp ON user_feedback(timestamp)")
         
         conn.commit()
         logger.info("데이터베이스 테이블 생성 완료")
