@@ -11,6 +11,9 @@ from loguru import logger
 
 from app.database.database_manager import db_manager
 from app.services.chat_nlp import ChatNLP, IntentType, EmotionType
+from app.services.conversation_context_manager import get_context_manager
+from app.services.emotion_analyzer import get_emotion_analyzer
+from app.core.exceptions import NLPException
 
 
 class ChatService:
@@ -19,12 +22,15 @@ class ChatService:
     def __init__(self):
         self.conversation_patterns = self._init_conversation_patterns()
         self.emotion_states = self._init_emotion_states()
+        self.emotion_analyzer = get_emotion_analyzer()  # 강화된 감정 분석기
         try:
             self.nlp = ChatNLP()  # NLP 모듈 초기화
             logger.info("NLP 모듈 초기화 성공")
         except Exception as e:
             logger.error("NLP 모듈 초기화 실패: %s", e)
             self.nlp = None
+        
+        logger.info("채팅 서비스 초기화 완료")
     
     def _init_conversation_patterns(self) -> Dict[str, Dict[str, Any]]:
         """대화 패턴 초기화"""
@@ -171,12 +177,113 @@ class ChatService:
                 "emotion": "excited",
                 "led_expression": "happy",
                 "buzzer_sound": "success"
+            },
+            # 추가 대화 시나리오 (3순위 작업)
+            "question_about_feelings": {
+                "keywords": ["기분", "어때", "괜찮아", "괜찮니", "상태"],
+                "responses": [
+                    "저는 정말 좋아요! 당신과 대화하는 게 즐거워요.",
+                    "기분 최고예요! 오늘도 많은 것을 배우고 있어요.",
+                    "아주 좋아요! 당신 덕분에 매일 즐거워요."
+                ],
+                "emotion": "happy",
+                "led_expression": "happy",
+                "buzzer_sound": "success"
+            },
+            "question_about_name": {
+                "keywords": ["이름이 뭐", "이름 알려", "이름은"],
+                "responses": [
+                    "제 이름은 덱스예요! 책상(Desk)에서 이름을 따왔어요.",
+                    "저는 덱스라고 해요. 책상 위를 돌아다니는 로봇이에요!",
+                    "덱스라고 불러주세요. 책상(Desk)과 제가 합쳐진 이름이에요."
+                ],
+                "emotion": "proud",
+                "led_expression": "happy",
+                "buzzer_sound": "success"
+            },
+            "casual_chat": {
+                "keywords": ["그래", "음", "오", "아", "에"],
+                "responses": [
+                    "네, 무엇을 도와드릴까요?",
+                    "더 궁금한 것이 있으신가요?",
+                    "계속 이야기해 주세요!"
+                ],
+                "emotion": "neutral",
+                "led_expression": "neutral",
+                "buzzer_sound": "info"
+            },
+            "encouragement": {
+                "keywords": ["힘내", "파이팅", "응원", "잘할"],
+                "responses": [
+                    "힘내세요! 저도 응원할게요!",
+                    "파이팅! 당신은 할 수 있어요!",
+                    "언제나 응원하고 있어요!"
+                ],
+                "emotion": "supportive",
+                "led_expression": "happy",
+                "buzzer_sound": "success"
+            },
+            "apology": {
+                "keywords": ["미안", "죄송", "잘못"],
+                "responses": [
+                    "괜찮아요! 걱정하지 마세요.",
+                    "전혀 문제없어요. 다 괜찮아요!",
+                    "괜찮아요. 저는 이해해요."
+                ],
+                "emotion": "supportive",
+                "led_expression": "warm",
+                "buzzer_sound": "info"
+            },
+            "love_expression": {
+                "keywords": ["사랑", "좋아해", "귀여", "이쁘", "예쁘"],
+                "responses": [
+                    "저도 당신이 좋아요! 정말 고마워요!",
+                    "와! 정말 기뻐요! 저도 당신을 좋아해요!",
+                    "그렇게 말씀해 주시니 정말 행복해요!"
+                ],
+                "emotion": "joyful",
+                "led_expression": "happy_animated",
+                "buzzer_sound": "success_melody"
+            },
+            "joke_request": {
+                "keywords": ["재밌", "웃겨", "장난", "놀", "재미"],
+                "responses": [
+                    "제가 빙글빙글 돌아볼까요? 재밌을 거예요!",
+                    "저는 로봇이지만 재미있게 놀 수 있어요! 무엇을 해볼까요?",
+                    "빙글빙글 돌거나 춤을 출 수 있어요!"
+                ],
+                "emotion": "excited",
+                "led_expression": "happy",
+                "buzzer_sound": "success"
+            },
+            "weather_question": {
+                "keywords": ["날씨", "비", "날", "춥", "더워"],
+                "responses": [
+                    "저는 실내에 있어서 날씨를 잘 모르지만, 오늘도 좋은 하루 되길 바래요!",
+                    "날씨는 잘 모르지만, 당신과 있으면 언제나 좋은 날씨 같아요!",
+                    "실내에 있어서 날씨는 모르겠어요. 밖은 어때요?"
+                ],
+                "emotion": "curious",
+                "led_expression": "neutral",
+                "buzzer_sound": "info"
+            },
+            "time_question": {
+                "keywords": ["시간", "몇 시", "언제"],
+                "responses": [
+                    "저는 시계가 없어요. 하지만 당신과 함께 하는 시간은 언제나 즐거워요!",
+                    "시간은 잘 모르겠어요. 하지만 지금 이 순간이 중요하죠!",
+                    "시간보다는 우리가 함께 하는 것이 더 중요해요!"
+                ],
+                "emotion": "friendly",
+                "led_expression": "happy",
+                "buzzer_sound": "info"
             }
         }
     
     def _init_emotion_states(self) -> Dict[str, Dict[str, str]]:
-        """감정 상태 초기화"""
+        """감정 상태 초기화 (확장됨)"""
         return {
+            # 기존 감정
             "happy": {
                 "led_expression": "happy",
                 "buzzer_sound": "success",
@@ -216,6 +323,47 @@ class ChatService:
                 "led_expression": "happy",
                 "buzzer_sound": "notification",
                 "response_style": "supportive"
+            },
+            # 새로 추가된 감정 (3순위 작업)
+            "joyful": {
+                "led_expression": "happy_animated",
+                "buzzer_sound": "success_melody",
+                "response_style": "cheerful"
+            },
+            "supportive": {
+                "led_expression": "warm",
+                "buzzer_sound": "success",
+                "response_style": "encouraging"
+            },
+            "friendly": {
+                "led_expression": "happy",
+                "buzzer_sound": "info",
+                "response_style": "casual"
+            },
+            "pleased": {
+                "led_expression": "smile",
+                "buzzer_sound": "notification",
+                "response_style": "polite"
+            },
+            "interested": {
+                "led_expression": "focused",
+                "buzzer_sound": "info",
+                "response_style": "engaged"
+            },
+            "frustrated": {
+                "led_expression": "angry",
+                "buzzer_sound": "warning",
+                "response_style": "apologetic"
+            },
+            "worried": {
+                "led_expression": "concerned",
+                "buzzer_sound": "warning",
+                "response_style": "reassuring"
+            },
+            "neutral": {
+                "led_expression": "neutral",
+                "buzzer_sound": "none",
+                "response_style": "calm"
             }
         }
     
@@ -235,11 +383,15 @@ class ChatService:
             # 메시지 ID 생성
             message_id = str(uuid.uuid4())
             
+            # 강화된 컨텍스트 관리자 사용
+            context_manager = await get_context_manager()
+            conv_context = await context_manager.get_or_create_context(user_id, session_id)
+            
             # NLP 분석 수행
             if self.nlp:
                 try:
                     nlp_analysis = self.nlp.analyze_text(message)
-                    # 기존 패턴 기반 분석과 NLP 분석 결과 결합
+                    # 기존 패턴 기반 분석과 NLP 분석 결합
                     intent = self._combine_intent_analysis(message, nlp_analysis)
                     emotion = self._combine_emotion_analysis(message, intent, nlp_analysis)
                 except Exception as e:
@@ -253,11 +405,17 @@ class ChatService:
                 emotion = self._analyze_emotion(message, intent)
                 nlp_analysis = None
             
-            # 컨텍스트 조회
-            context = await self.get_chat_context(user_id, session_id)
+            # 컨텍스트 기반 응답 생성 (강화됨)
+            response = await self._generate_contextual_response(
+                message, intent, emotion, conv_context
+            )
             
-            # 응답 생성
-            response = self._generate_response(message, intent, emotion, context)
+            # 이름 추출 (자기소개인 경우)
+            extracted_info = {}
+            if intent == "introduction":
+                extracted_name = self._extract_name(message)
+                if extracted_name:
+                    extracted_info["user_name"] = extracted_name
             
             # 대화 기록 저장
             await self._save_conversation(
@@ -271,8 +429,18 @@ class ChatService:
                 conversation_type=intent
             )
             
-            # 컨텍스트 업데이트
-            await self._update_context(user_id, session_id, intent, response)
+            # 강화된 컨텍스트 업데이트
+            await context_manager.update_context(
+                session_id=session_id,
+                message=message,
+                intent=intent,
+                emotion=emotion,
+                response=response["text"],
+                extracted_info=extracted_info
+            )
+            
+            # 컨텍스트 요약 정보 조회
+            context_summary = await context_manager.get_conversation_summary(session_id)
             
             result = {
                 "message_id": message_id,
@@ -281,9 +449,12 @@ class ChatService:
                 "conversation_type": intent,
                 "timestamp": datetime.now().isoformat(),
                 "context": {
-                    "user_name": context.get("user_name"),
+                    "user_name": context_summary.get("user_name"),
                     "robot_mood": response["emotion"],
-                    "follow_up": response.get("follow_up")
+                    "follow_up": response.get("follow_up"),
+                    "conversation_phase": context_summary.get("conversation_phase"),
+                    "current_topics": context_summary.get("current_topics", []),
+                    "total_interactions": context_summary.get("total_interactions", 0)
                 }
             }
             
@@ -303,7 +474,10 @@ class ChatService:
             
         except Exception as e:
             logger.error(f"메시지 처리 실패: {e}")
-            raise
+            raise NLPException(
+                message=f"메시지 처리 실패: {str(e)}",
+                original_exception=e
+            )
     
     def _analyze_intent(self, message: str) -> str:
         """메시지의 의도를 분석합니다."""
@@ -311,19 +485,28 @@ class ChatService:
         
         # 우선순위 기반 의도 분석 (더 구체적인 패턴을 먼저 확인)
         priority_intents = [
-            "robot_spin",          # 로봇 빙글빙글 명령 (가장 구체적)
-            "robot_move_forward",  # 로봇 전진 명령
-            "robot_stop",          # 로봇 정지 명령
-            "robot_turn",          # 로봇 회전 명령 (가장 일반적)
-            "farewell",            # 작별 인사
-            "introduction",        # 자기소개
-            "request_help",        # 도움 요청
+            "robot_spin",            # 로봇 빙글빙글 명령 (가장 구체적)
+            "robot_move_forward",    # 로봇 전진 명령
+            "robot_stop",            # 로봇 정지 명령
+            "robot_turn",            # 로봇 회전 명령
+            "farewell",              # 작별 인사
+            "introduction",          # 자기소개
+            "love_expression",       # 사랑 표현 (새로 추가)
+            "apology",               # 사과 (새로 추가)
+            "encouragement",         # 응원 (새로 추가)
+            "question_about_name",   # 이름 질문 (새로 추가)
+            "question_about_feelings", # 기분 질문 (새로 추가)
+            "weather_question",      # 날씨 질문 (새로 추가)
+            "time_question",         # 시간 질문 (새로 추가)
+            "joke_request",          # 장난/재미 요청 (새로 추가)
+            "request_help",          # 도움 요청
             "question_about_robot",  # 로봇에 대한 질문
             "question_capabilities", # 능력에 대한 질문
-            "praise",              # 칭찬
-            "compliment",          # 칭찬 (일반)
-            "confused",            # 혼란
-            "greeting"             # 인사 (우선순위 낮음)
+            "praise",                # 칭찬
+            "compliment",            # 칭찬 (일반)
+            "confused",              # 혼란
+            "casual_chat",           # 일상 대화 (새로 추가)
+            "greeting"               # 인사 (우선순위 낮음)
         ]
         
         # 우선순위 순서대로 의도 확인
@@ -343,55 +526,66 @@ class ChatService:
         return "unknown"
     
     def _analyze_emotion(self, message: str, intent: str) -> str:
-        """메시지의 감정을 분석합니다."""
-        # 의도에 따른 기본 감정
+        """메시지의 감정을 분석합니다 (강화됨)."""
+        # 강화된 감정 분석기 사용
+        emotion_state = self.emotion_analyzer.analyze_emotion(
+            text=message,
+            intent=intent
+        )
+        
+        # 의도 기반 기본 감정도 고려
         if intent in self.conversation_patterns:
-            return self.conversation_patterns[intent]["emotion"]
+            pattern_emotion = self.conversation_patterns[intent]["emotion"]
+            # 신뢰도가 낮으면 패턴 기반 감정 사용
+            if emotion_state.confidence < 0.5:
+                return pattern_emotion
         
-        # 키워드 기반 감정 분석
-        positive_keywords = ["좋아", "멋져", "고마워", "감사", "대단", "훌륭"]
-        negative_keywords = ["싫어", "나빠", "화나", "짜증"]
-        
-        message_lower = message.lower()
-        
-        for keyword in positive_keywords:
-            if keyword in message_lower:
-                return "happy"
-        
-        for keyword in negative_keywords:
-            if keyword in message_lower:
-                return "sad"
-        
-        return "neutral"
+        return emotion_state.primary_emotion
     
-    def _generate_response(self, message: str, intent: str, emotion: str, context: Dict[str, Any]) -> Dict[str, Any]:
-        """응답을 생성합니다."""
-        user_name = context.get("user_name")
+    async def _generate_contextual_response(
+        self,
+        message: str,
+        intent: str,
+        emotion: str,
+        conv_context
+    ) -> Dict[str, Any]:
+        """
+        컨텍스트를 고려한 응답 생성 (강화됨)
+        
+        Args:
+            message: 사용자 메시지
+            intent: 의도
+            emotion: 감정
+            conv_context: 대화 컨텍스트
+        
+        Returns:
+            응답 데이터
+        """
+        user_name = conv_context.user_memory.user_name
+        conversation_phase = conv_context.conversation_phase
+        total_interactions = conv_context.user_memory.total_interactions
         
         if intent in self.conversation_patterns:
             pattern = self.conversation_patterns[intent]
             responses = pattern["responses"]
             
-            # 랜덤 응답 선택
-            response_text = random.choice(responses)
-            
-            # 사용자 이름 치환 (자기소개가 아닌 경우에만)
-            if user_name and "{user_name}" in response_text and intent != "introduction":
-                response_text = response_text.format(user_name=user_name)
+            # 컨텍스트에 따라 응답 선택 또는 수정
+            response_text = await self._select_contextual_response(
+                responses,
+                intent,
+                user_name,
+                conversation_phase,
+                total_interactions
+            )
             
             # 이름 추출 및 치환 (자기소개인 경우)
             if intent == "introduction":
                 extracted_name = self._extract_name(message)
                 if extracted_name:
-                    # 기존 사용자 이름이 없거나 추출된 이름이 더 구체적일 때 업데이트
-                    if not user_name or len(extracted_name) > 1:
-                        user_name = extracted_name
-                    # 모든 {user_name} 치환
                     response_text = response_text.replace("{user_name}", extracted_name)
                 elif user_name:
                     response_text = response_text.replace("{user_name}", user_name)
                 else:
-                    # 이름이 없으면 기본값 사용
                     response_text = response_text.replace("{user_name}", "")
             
             # 다른 의도에서도 {user_name} 치환 처리
@@ -406,15 +600,104 @@ class ChatService:
                 "emotion": pattern["emotion"],
                 "led_expression": pattern["led_expression"],
                 "buzzer_sound": pattern["buzzer_sound"],
-                "follow_up": self._generate_follow_up(intent)
+                "follow_up": await self._generate_smart_follow_up(intent, conv_context)
             }
         
-        # 알 수 없는 의도
+        # 알 수 없는 의도 - 컨텍스트 기반 응답
+        return await self._generate_fallback_response(conv_context)
+    
+    async def _select_contextual_response(
+        self,
+        responses: List[str],
+        intent: str,
+        user_name: Optional[str],
+        conversation_phase: str,
+        total_interactions: int
+    ) -> str:
+        """
+        컨텍스트에 맞는 응답 선택
+        
+        Args:
+            responses: 가능한 응답 리스트
+            intent: 의도
+            user_name: 사용자 이름
+            conversation_phase: 대화 단계
+            total_interactions: 총 상호작용 수
+        
+        Returns:
+            선택된 응답
+        """
+        # 첫 만남이면 더 친근한 응답
+        if total_interactions == 0 and intent == "greeting":
+            return "안녕하세요! 저는 덱스에요. 처음 뵙겠습니다! 당신은 누구신가요?"
+        
+        # 단골 사용자면 더 친밀한 응답
+        if total_interactions > 10 and intent == "greeting" and user_name:
+            return f"안녕하세요 {user_name}님! 또 만나서 반가워요!"
+        
+        # 기본적으로는 랜덤 선택
+        return random.choice(responses)
+    
+    async def _generate_smart_follow_up(
+        self,
+        intent: str,
+        conv_context
+    ) -> Optional[str]:
+        """
+        스마트 후속 질문 생성 (컨텍스트 기반)
+        
+        Args:
+            intent: 의도
+            conv_context: 대화 컨텍스트
+        
+        Returns:
+            후속 질문
+        """
+        # 기본 후속 질문
+        basic_follow_ups = {
+            "greeting": "오늘은 어떤 도움이 필요하신가요?",
+            "introduction": "저는 로봇이에요. 이동하고 센서로 주변을 감지할 수 있어요.",
+            "question_about_robot": "앞으로 가달라고 하시면 이동할 수 있어요. 한번 해보실래요?",
+            "question_capabilities": "무엇을 도와드릴까요?",
+            "request_help": "구체적으로 어떤 도움이 필요하신가요?",
+            "praise": "언제든지 도와드릴게요!",
+            "compliment": "언제든지 도와드릴게요!",
+            "farewell": None,
+            "confused": "다시 한번 말씀해 주실 수 있나요?"
+        }
+        
+        # 컨텍스트에 따른 맞춤 후속 질문
+        if len(conv_context.recent_messages) > 3:
+            # 여러 번 대화한 경우, 더 구체적인 제안
+            if intent in ["question_about_robot", "question_capabilities"]:
+                return "저와 함께 책상 탐험을 시작해볼까요? '앞으로 가줘'라고 말씀해 주세요!"
+        
+        return basic_follow_ups.get(intent)
+    
+    async def _generate_fallback_response(self, conv_context) -> Dict[str, Any]:
+        """
+        알 수 없는 의도에 대한 fallback 응답 (컨텍스트 기반)
+        
+        Args:
+            conv_context: 대화 컨텍스트
+        
+        Returns:
+            응답 데이터
+        """
+        user_name = conv_context.user_memory.user_name
+        
+        # 사용자 이름이 있으면 더 친근하게
+        if user_name:
+            text = f"{user_name}님, 죄송해요. 이해하지 못했어요. 다시 말씀해 주실 수 있나요?"
+        else:
+            text = "죄송해요. 이해하지 못했어요. 다시 말씀해 주실 수 있나요?"
+        
         return {
-            "text": "죄송해요. 이해하지 못했어요. 다시 말씀해 주실 수 있나요?",
+            "text": text,
             "emotion": "confused",
             "led_expression": "neutral",
-            "buzzer_sound": "error"
+            "buzzer_sound": "error",
+            "follow_up": "예를 들어 '앞으로 가줘' 또는 '오른쪽으로 돌아줘'라고 말씀해 주세요."
         }
     
     def _extract_name(self, message: str) -> Optional[str]:

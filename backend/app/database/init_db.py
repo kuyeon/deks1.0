@@ -204,6 +204,24 @@ def create_tables():
             )
         """)
         
+        # 사용자 장기 기억 테이블 (3순위: Chat Interaction API 고도화)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_long_term_memory (
+                user_id TEXT PRIMARY KEY,
+                user_name TEXT,
+                preferred_name TEXT,
+                personality_traits TEXT,  -- JSON: {"polite": 0.8, "curious": 0.6}
+                interests TEXT,  -- JSON: ["로봇", "AI", "코딩"]
+                preferences TEXT,  -- JSON: {"response_style": "casual", "detail_level": "medium"}
+                learned_patterns TEXT,  -- JSON: {"greeting": 15, "command": 30}
+                total_interactions INTEGER DEFAULT 0,
+                first_met DATETIME,
+                last_met DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
         # 명령 실행 로그 테이블
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS command_execution_logs (
@@ -226,6 +244,9 @@ def create_tables():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_robot_states_timestamp ON robot_states(timestamp)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sensor_data_timestamp ON sensor_data(timestamp)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_command_execution_logs_timestamp ON command_execution_logs(timestamp)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_messages_user_id ON chat_messages(user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_long_term_memory_user_id ON user_long_term_memory(user_id)")
         
         conn.commit()
         logger.info("데이터베이스 테이블 생성 완료")
