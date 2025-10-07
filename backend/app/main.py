@@ -11,6 +11,7 @@ from datetime import datetime
 from app.core.config import get_settings
 from app.api.v1 import api_router
 from app.database.init_db import init_database
+from app.core.error_handlers import register_error_handlers, get_error_statistics
 from fastapi import WebSocket, WebSocketDisconnect
 from app.services.socket_bridge import start_socket_bridge, stop_socket_bridge, get_socket_bridge
 import json
@@ -52,8 +53,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# WebSocket CORS 설정
-from fastapi.middleware.cors import CORSMiddleware as WSOriginChecker
+# 전역 에러 핸들러 등록
+register_error_handlers(app)
 
 @app.middleware("http")
 async def add_cors_headers(request, call_next):
@@ -177,6 +178,25 @@ async def socket_bridge_status():
     except Exception as e:
         logger.error(f"Socket Bridge 상태 조회 실패: {e}")
         return {"error": str(e)}
+
+
+@app.get("/errors/statistics")
+async def get_error_stats():
+    """에러 통계 조회"""
+    try:
+        stats = get_error_statistics()
+        return {
+            "success": True,
+            "statistics": stats,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"에러 통계 조회 실패: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
 
 
 if __name__ == "__main__":

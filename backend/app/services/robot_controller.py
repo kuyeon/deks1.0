@@ -11,6 +11,11 @@ from enum import Enum
 from loguru import logger
 
 from .connection_manager import ConnectionManager
+from app.core.exceptions import (
+    RobotNotConnectedException,
+    RobotCommandFailedException,
+    InvalidParameterException
+)
 
 
 class RobotState(Enum):
@@ -124,21 +129,21 @@ class RobotController:
         """로봇에 명령 전송"""
         try:
             if not self.connection_manager:
-                logger.error("연결 관리자가 설정되지 않음")
-                return False
+                raise RobotCommandFailedException(
+                    command=command.get('type', 'unknown'),
+                    reason="연결 관리자가 설정되지 않음"
+                )
             
             # 첫 번째 연결된 클라이언트 찾기
             if not client_id:
                 client_id = await self.connection_manager.get_first_client()
                 if not client_id:
-                    logger.error("연결된 로봇이 없습니다")
-                    return False
+                    raise RobotNotConnectedException()
             
             # 명령 전송
             writer = await self.connection_manager.get_client_writer(client_id)
             if not writer:
-                logger.error(f"클라이언트 Writer를 찾을 수 없습니다 - {client_id}")
-                return False
+                raise RobotNotConnectedException(robot_id=client_id)
             
             # 명령 메시지 생성
             command_message = {
@@ -159,9 +164,16 @@ class RobotController:
             logger.debug(f"명령 전송 완료 - {client_id}: {command.get('type')}")
             return True
             
+        except (RobotNotConnectedException, RobotCommandFailedException):
+            # Deks 예외는 그대로 전파
+            raise
         except Exception as e:
             logger.error(f"명령 전송 실패: {e}")
-            return False
+            raise RobotCommandFailedException(
+                command=command.get('type', 'unknown'),
+                reason=str(e),
+                original_exception=e
+            )
     
     def _add_to_command_history(self, command: Dict[str, Any]):
         """명령 히스토리에 추가"""
@@ -184,7 +196,7 @@ class RobotController:
     async def move_forward(self, speed: int, distance: int) -> bool:
         """전진 명령"""
         try:
-            # 입력 검증
+            # 입력 검증 (예외 발생 가능)
             speed = self._validate_speed(speed)
             distance = self._validate_distance(distance)
             
@@ -202,9 +214,16 @@ class RobotController:
             logger.info(f"전진 명령 추가됨 - 속도: {speed}, 거리: {distance}")
             return True
             
+        except InvalidParameterException:
+            # 파라미터 검증 예외는 그대로 전파
+            raise
         except Exception as e:
             logger.error(f"전진 명령 실패: {e}")
-            return False
+            raise RobotCommandFailedException(
+                command="move_forward",
+                reason=str(e),
+                original_exception=e
+            )
     
     async def move_backward(self, speed: int, distance: int) -> bool:
         """후진 명령"""
@@ -225,9 +244,15 @@ class RobotController:
             logger.info(f"후진 명령 추가됨 - 속도: {speed}, 거리: {distance}")
             return True
             
+        except InvalidParameterException:
+            raise
         except Exception as e:
             logger.error(f"후진 명령 실패: {e}")
-            return False
+            raise RobotCommandFailedException(
+                command="move_backward",
+                reason=str(e),
+                original_exception=e
+            )
     
     async def turn_left(self, angle: int = 90) -> bool:
         """좌회전 명령"""
@@ -246,7 +271,11 @@ class RobotController:
             
         except Exception as e:
             logger.error(f"좌회전 명령 실패: {e}")
-            return False
+            raise RobotCommandFailedException(
+                command="turn_left",
+                reason=str(e),
+                original_exception=e
+            )
     
     async def turn_right(self, angle: int = 90) -> bool:
         """우회전 명령"""
@@ -265,7 +294,11 @@ class RobotController:
             
         except Exception as e:
             logger.error(f"우회전 명령 실패: {e}")
-            return False
+            raise RobotCommandFailedException(
+                command="turn_right",
+                reason=str(e),
+                original_exception=e
+            )
     
     async def spin(self, rotations: int = 1) -> bool:
         """빙글빙글 명령"""
@@ -284,7 +317,11 @@ class RobotController:
             
         except Exception as e:
             logger.error(f"빙글빙글 명령 실패: {e}")
-            return False
+            raise RobotCommandFailedException(
+                command="spin",
+                reason=str(e),
+                original_exception=e
+            )
     
     async def stop(self) -> bool:
         """정지 명령"""
@@ -336,21 +373,29 @@ class RobotController:
     def _validate_speed(self, speed: int) -> int:
         """속도 값 검증"""
         if speed < self.min_speed:
-            logger.warning(f"속도가 최소값보다 낮음 - {speed}, 최소값으로 조정: {self.min_speed}")
-            return self.min_speed
+            raise InvalidParameterException(
+                parameter_name="speed",
+                reason=f"속도는 {self.min_speed}보다 크거나 같아야 합니다 (입력값: {speed})"
+            )
         elif speed > self.max_speed:
-            logger.warning(f"속도가 최대값보다 높음 - {speed}, 최대값으로 조정: {self.max_speed}")
-            return self.max_speed
+            raise InvalidParameterException(
+                parameter_name="speed",
+                reason=f"속도는 {self.max_speed}보다 작거나 같아야 합니다 (입력값: {speed})"
+            )
         return speed
     
     def _validate_distance(self, distance: int) -> int:
         """거리 값 검증"""
         if distance < self.min_distance:
-            logger.warning(f"거리가 최소값보다 낮음 - {distance}, 최소값으로 조정: {self.min_distance}")
-            return self.min_distance
+            raise InvalidParameterException(
+                parameter_name="distance",
+                reason=f"거리는 {self.min_distance}보다 크거나 같아야 합니다 (입력값: {distance})"
+            )
         elif distance > self.max_distance:
-            logger.warning(f"거리가 최대값보다 높음 - {distance}, 최대값으로 조정: {self.max_distance}")
-            return self.max_distance
+            raise InvalidParameterException(
+                parameter_name="distance",
+                reason=f"거리는 {self.max_distance}보다 작거나 같아야 합니다 (입력값: {distance})"
+            )
         return distance
     
     async def handle_command_result(self, result_data: Dict[str, Any]):
