@@ -113,52 +113,80 @@ conversation_patterns = {
 }
 ```
 
-### 감정 상태 관리
+### 강화된 감정 상태 관리 (3순위 작업 완료)
+16개 감정 상태 + 강도/카테고리 시스템
+
 ```python
+# 감정 카테고리
+EmotionCategory = {
+    POSITIVE,    # 긍정적 (joyful, excited, happy, pleased)
+    NEGATIVE,    # 부정적 (sad, frustrated, worried)
+    NEUTRAL,     # 중립적 (neutral, confused, curious)
+    MIXED        # 복합적 (bittersweet)
+}
+
+# 감정 강도 (5단계)
+EmotionIntensity = {
+    VERY_LOW: 1, LOW: 2, MEDIUM: 3, HIGH: 4, VERY_HIGH: 5
+}
+
+# 지원 감정 (16개)
 emotion_states = {
-    "happy": {
-        "triggers": ["안녕", "좋아", "고마워", "멋져"],
-        "led_expression": "happy",
-        "buzzer_sound": "success",
-        "response_style": "cheerful"
-    },
-    "curious": {
-        "triggers": ["뭐야", "어떻게", "왜", "무엇"],
-        "led_expression": "surprised",
-        "buzzer_sound": "notification",
-        "response_style": "inquisitive"
-    },
-    "confused": {
-        "triggers": ["모르겠", "이해 안", "뭐라고"],
-        "led_expression": "neutral",
-        "buzzer_sound": "error",
-        "response_style": "helpful"
-    }
+    "joyful", "excited", "happy", "pleased",        # 긍정
+    "curious", "interested",                        # 호기심
+    "helpful", "supportive", "proud", "friendly",   # 도움/자랑
+    "sad", "frustrated", "worried",                 # 부정
+    "confused", "neutral", "bittersweet"            # 중립/복합
+}
+
+# 감정 응답 매핑
+EmotionResponse = {
+    emotion_state,     # EmotionState 객체
+    led_expression,    # LED 표현
+    buzzer_sound,      # 버저 소리
+    response_modifier, # 응답 스타일
+    animation          # 애니메이션 (선택)
 }
 ```
 
-### 대화 컨텍스트 관리
+### 강화된 대화 컨텍스트 관리 (3순위 작업 완료)
+장기 기억 + 맥락 유지 시스템
+
 ```python
-context_manager = {
-    "session_tracking": {
-        "user_id": "string",
-        "session_id": "string", 
-        "conversation_count": "integer",
-        "last_interaction": "datetime",
-        "current_topic": "string"
-    },
-    "user_profile": {
-        "user_name": "string",
-        "preferred_style": "string",
-        "conversation_history": "list",
-        "remembered_info": "dict"
-    },
-    "robot_state": {
-        "current_mood": "string",
-        "emotion_history": "list",
-        "interaction_count": "integer",
-        "learning_data": "dict"
-    }
+# 사용자 장기 기억
+UserMemory = {
+    "user_id": "string",
+    "user_name": "string",
+    "preferred_name": "string",
+    "personality_traits": {"polite": 0.8, "curious": 0.6},
+    "interests": ["로봇", "AI", "코딩"],
+    "preferences": {"response_style": "casual"},
+    "learned_patterns": {"greeting": 15, "command": 30},
+    "total_interactions": "integer",
+    "first_met": "datetime",
+    "last_met": "datetime"
+}
+
+# 대화 컨텍스트 (세션 기반)
+ConversationContext = {
+    "user_id": "string",
+    "session_id": "string",
+    "user_memory": "UserMemory",
+    "current_topics": ["주제1", "주제2"],
+    "recent_messages": [{"timestamp", "message", "intent"}],
+    "robot_mood": "happy",
+    "conversation_phase": "conversation",  # greeting/introduction/conversation/command/farewell
+    "last_intent": "praise",
+    "last_emotion": "happy"
+}
+
+# 대화 주제 추적
+ConversationTopic = {
+    "topic": "로봇 이동",
+    "started_at": "datetime",
+    "last_mentioned": "datetime",
+    "mention_count": 5,
+    "related_keywords": ["앞으로", "이동", "전진"]
 }
 ```
 
@@ -225,6 +253,22 @@ CREATE TABLE emotion_responses (
     trigger_command TEXT,
     user_satisfaction INTEGER CHECK(user_satisfaction >= 1 AND user_satisfaction <= 5)
 );
+
+-- 사용자 장기 기억 테이블 (3순위 추가)
+CREATE TABLE user_long_term_memory (
+    user_id TEXT PRIMARY KEY,
+    user_name TEXT,
+    preferred_name TEXT,
+    personality_traits TEXT,  -- JSON
+    interests TEXT,           -- JSON
+    preferences TEXT,         -- JSON
+    learned_patterns TEXT,    -- JSON
+    total_interactions INTEGER DEFAULT 0,
+    first_met DATETIME,
+    last_met DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
 ## 🔧 개발 도구
@@ -234,6 +278,27 @@ CREATE TABLE emotion_responses (
 - **Git** - 버전 관리
 - **CursorAI** - 파이썬 개발
 
+## 🎯 완료된 기술 스택 개선 (우선순위 작업)
+
+### ✅ 1순위: Testing (2025-10-05)
+- **pytest** 8.4.2 - 테스트 프레임워크
+- **pytest-asyncio** 1.2.0 - 비동기 테스트
+- **FastAPI TestClient** - API 테스트
+- **총 284개 테스트** (95% 통과율)
+
+### ✅ 2순위: Error Handling (2025-10-07)
+- **커스텀 예외 클래스** 40+개
+- **전역 에러 핸들러** 4개
+- **표준화된 에러 응답** 모델
+- **에러 추적 및 통계** API
+
+### ✅ 3순위: Chat Interaction Enhanced (2025-10-07)
+- **ConversationContextManager** - 장기 기억 시스템
+- **EmotionAnalyzer** - 16개 감정 + 강도/카테고리
+- **20개 대화 시나리오** (기존 12개 + 신규 8개)
+- **개인화 시스템** - 선호도/관심사 학습
+- **user_long_term_memory** DB 테이블
+
 ## 🚨 주의사항
 
 1. **ESP32 S3의 메모리 제한**: 마이크로파이썬은 메모리를 많이 사용하므로 효율적인 코딩 필요
@@ -242,3 +307,7 @@ CREATE TABLE emotion_responses (
 4. **전력 관리**: 배터리 사용 시 저전력 모드 구현 고려
 5. **자연어 처리**: 규칙 기반 시스템의 한계로 인해 새로운 표현 학습 필요
 6. **명령어 확장**: 사용자 피드백을 바탕으로 키워드 패턴 지속적 업데이트 필요
+
+---
+
+*최종 업데이트: 2025년 10월 7일 (1-3순위 작업 완료)*
