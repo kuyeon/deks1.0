@@ -144,8 +144,20 @@ class DeksRobot:
         
         try:
             message = json.dumps(data) + "\n"
-            self.socket.send(message.encode())
+            encoded_message = message.encode()
+            
+            # 소켓 전송 (논블로킹 설정 후 전송)
+            self.socket.setblocking(True)
+            self.socket.send(encoded_message)
             return True
+        except OSError as e:
+            # 타임아웃 에러는 무시하고 계속
+            if e.args[0] in (116, 110):  # ETIMEDOUT, ECONNRESET은 재시도
+                return False
+            else:
+                print(f"데이터 전송 실패: {e}")
+                self.connected = False
+                return False
         except Exception as e:
             print(f"데이터 전송 실패: {e}")
             self.connected = False
