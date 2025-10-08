@@ -431,17 +431,45 @@ async def main():
         if not robot.connected:
             print("서버 연결 실패 - 로컬 모드로 계속")
     
-    # 메인 루프 실행
-    try:
-        await robot.main_loop()
-    except KeyboardInterrupt:
-        print("프로그램 중단")
-    finally:
-        # 정리 작업
-        robot.stop_motors()
-        if robot.socket:
-            robot.socket.close()
-        print("프로그램 종료")
+    # 메인 루프 실행 (재연결 루프)
+    while True:
+        try:
+            # 연결 확인
+            if not robot.wifi_connected:
+                print("Wi-Fi 재연결 시도...")
+                if robot.connect_wifi():
+                    print("Wi-Fi 재연결 성공")
+                else:
+                    print("Wi-Fi 재연결 실패 - 5초 후 재시도")
+                    await asyncio.sleep(5)
+                    continue
+            
+            if not robot.connected:
+                print("서버 재연결 시도...")
+                if robot.connect_server():
+                    print("서버 재연결 성공")
+                else:
+                    print("서버 재연결 실패 - 3초 후 재시도")
+                    await asyncio.sleep(3)
+                    continue
+            
+            # 메인 루프 실행
+            await robot.main_loop()
+            
+        except KeyboardInterrupt:
+            print("프로그램 중단")
+            break
+        except Exception as e:
+            print(f"메인 루프 예외: {e}")
+            await asyncio.sleep(5)
+            # 재연결 시도
+            robot.connected = False
+    
+    # 정리 작업
+    robot.stop_motors()
+    if robot.socket:
+        robot.socket.close()
+    print("프로그램 종료")
 
 # 프로그램 실행
 if __name__ == "__main__":
