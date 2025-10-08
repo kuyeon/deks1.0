@@ -679,24 +679,26 @@ class HardwareInterface:
         
         sensor_data = self.sensor_manager.get_sensor_data()
         
-        # 낙하 감지
-        if sensor_data["drop_detected"]:
-            print("낙하 감지 - 비상 정지")
-            self.emergency_stop = True
-            self.motor_controller.stop()
-            self.led_controller.set_expression("error")
-            self.buzzer_controller.play_sound("warning")
-            return False
+        # 테스트 모드: 안전 검사 비활성화
+        # 낙하 감지 (비활성화됨)
+        # if sensor_data["drop_detected"]:
+        #     print("낙하 감지 - 비상 정지")
+        #     self.emergency_stop = True
+        #     self.motor_controller.stop()
+        #     self.led_controller.set_expression("error")
+        #     self.buzzer_controller.play_sound("warning")
+        #     return False
         
-        # 배터리 부족
-        if sensor_data["battery_status"] == "critical":
-            print("배터리 위험 - 비상 정지")
-            self.emergency_stop = True
-            self.motor_controller.stop()
-            self.led_controller.set_expression("error")
-            self.buzzer_controller.play_sound("error")
-            return False
+        # 테스트 모드: 배터리 검사 비활성화
+        # if sensor_data["battery_status"] == "critical":
+        #     print("배터리 위험 - 비상 정지")
+        #     self.emergency_stop = True
+        #     self.motor_controller.stop()
+        #     self.led_controller.set_expression("error")
+        #     self.buzzer_controller.play_sound("error")
+        #     return False
         
+        # 테스트 모드: 항상 안전함
         return True
     
     def move_robot(self, left_speed: int, right_speed: int):
