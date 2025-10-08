@@ -411,10 +411,13 @@ class RobotController:
             
             if success:
                 self.current_state = RobotState.IDLE
-                logger.info(f"명령 실행 성공 - {command_id}")
+                logger.info(f"ESP32 명령 실행 성공 - {command_id}")
             else:
                 self.current_state = RobotState.ERROR
-                logger.error(f"명령 실행 실패 - {command_id}: {error_message}")
+                if error_message:
+                    logger.error(f"ESP32 명령 실행 실패 - {command_id}: {error_message}")
+                else:
+                    logger.warning(f"ESP32 명령 결과 수신 - {command_id} (에러 메시지 없음)")
             
             # 결과를 히스토리에 추가
             result_record = {
