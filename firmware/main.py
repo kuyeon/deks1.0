@@ -316,6 +316,13 @@ class DeksRobot:
                 self.stop_motors()
                 success = True
                 
+            elif inner_type == "spin":
+                # 빙글빙글 회전 명령
+                rotations = inner_command.get("rotations", 1)
+                print(f"빙글빙글 회전: {rotations}회")
+                self.move_motors(50, -50)  # 제자리 회전
+                success = True
+                
             else:
                 print(f"알 수 없는 내부 명령: {inner_type}")
             
