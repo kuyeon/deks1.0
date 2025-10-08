@@ -401,9 +401,13 @@ class RobotController:
     async def handle_command_result(self, result_data: Dict[str, Any]):
         """ESP32로부터 받은 명령 실행 결과 처리"""
         try:
-            command_id = result_data.get("command_id")
+            command_id = result_data.get("command_id", "unknown")
             success = result_data.get("success", False)
             error_message = result_data.get("error", "")
+            
+            if not command_id or command_id == "unknown":
+                logger.warning(f"command_id가 없는 결과 수신: {result_data}")
+                return
             
             if success:
                 self.current_state = RobotState.IDLE
