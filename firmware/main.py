@@ -106,7 +106,10 @@ class DeksRobot:
         
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket.settimeout(10)  # 10초 타임아웃
+            print(f"소켓 생성 완료, 연결 시도 중...")
             self.socket.connect((SERVER_HOST, SERVER_PORT))
+            self.socket.settimeout(None)  # 연결 후 타임아웃 해제
             self.connected = True
             print("서버 연결 성공")
             
@@ -191,39 +194,57 @@ class DeksRobot:
     def process_command(self, command):
         """서버 명령 처리"""
         cmd_type = command.get("type")
+        command_id = command.get("command_id", "unknown")
+        success = True
         
-        if cmd_type == "move":
-            # 이동 명령
-            left_speed = command.get("left_speed", 0)
-            right_speed = command.get("right_speed", 0)
-            self.move_motors(left_speed, right_speed)
-            
-        elif cmd_type == "stop":
-            # 정지 명령
-            self.stop_motors()
-            
-        elif cmd_type == "expression":
-            # 표정 변경
-            expression = command.get("expression", "neutral")
-            self.set_expression(expression)
-            
-        elif cmd_type == "sound":
-            # 소리 재생
-            sound = command.get("sound", "start")
-            duration = command.get("duration", 500)
-            self.play_sound(sound, duration)
-            
-        elif cmd_type == "emergency_stop":
-            # 비상 정지
-            self.hardware.emergency_stop = True
-            self.stop_motors()
-            self.set_expression("error")
-            self.play_sound("error")
-            
-        elif cmd_type == "reset":
-            # 시스템 리셋
-            self.hardware.reset_emergency_stop()
-            self.set_expression("neutral")
+        try:
+            if cmd_type == "move":
+                # 이동 명령
+                left_speed = command.get("left_speed", 0)
+                right_speed = command.get("right_speed", 0)
+                self.move_motors(left_speed, right_speed)
+                
+            elif cmd_type == "stop":
+                # 정지 명령
+                self.stop_motors()
+                
+            elif cmd_type == "expression":
+                # 표정 변경
+                expression = command.get("expression", "neutral")
+                self.set_expression(expression)
+                
+            elif cmd_type == "sound":
+                # 소리 재생
+                sound = command.get("sound", "start")
+                duration = command.get("duration", 500)
+                self.play_sound(sound, duration)
+                
+            elif cmd_type == "emergency_stop":
+                # 비상 정지
+                self.hardware.emergency_stop = True
+                self.stop_motors()
+                self.set_expression("error")
+                self.play_sound("error")
+                
+            elif cmd_type == "reset":
+                # 시스템 리셋
+                self.hardware.reset_emergency_stop()
+                self.set_expression("neutral")
+                
+        except Exception as e:
+            print(f"명령 실행 오류: {e}")
+            success = False
+        
+        # 기본 명령 타입에 대한 응답 (handshake_ack, ping, command는 별도 처리)
+        if cmd_type in ["move", "stop", "expression", "sound", "emergency_stop", "reset"]:
+            result = {
+                "type": "command_result",
+                "command_id": command_id,
+                "success": success,
+                "command_type": cmd_type,
+                "timestamp": time.time()
+            }
+            self.send_data(result)
             
         elif cmd_type == "handshake_ack":
             # 핸드셰이크 응답 수신
@@ -241,6 +262,8 @@ class DeksRobot:
             # 중첩된 명령 처리
             inner_command = command.get("command", {})
             inner_type = inner_command.get("type")
+            command_id = command.get("command_id", "unknown")
+            success = False
             
             if inner_type == "forward":
                 # 전진 명령
@@ -248,6 +271,7 @@ class DeksRobot:
                 distance = inner_command.get("distance", 0)
                 print(f"전진: 속도 {speed}, 거리 {distance}")
                 self.move_motors(speed, speed)
+                success = True
                 
             elif inner_type == "backward":
                 # 후진 명령
@@ -255,21 +279,39 @@ class DeksRobot:
                 distance = inner_command.get("distance", 0)
                 print(f"후진: 속도 {speed}, 거리 {distance}")
                 self.move_motors(-speed, -speed)
+                success = True
                 
             elif inner_type == "turn_left":
                 # 좌회전 명령
                 angle = inner_command.get("angle", 90)
                 print(f"좌회전: {angle}도")
                 self.move_motors(-50, 50)
+                success = True
                 
             elif inner_type == "turn_right":
                 # 우회전 명령
                 angle = inner_command.get("angle", 90)
                 print(f"우회전: {angle}도")
                 self.move_motors(50, -50)
+                success = True
+                
+            elif inner_type == "stop":
+                # 정지 명령
+                print("정지")
+                self.stop_motors()
+                success = True
                 
             else:
                 print(f"알 수 없는 내부 명령: {inner_type}")
+            
+            # 명령 실행 결과 응답
+            result = {
+                "type": "command_result",
+                "command_id": command_id,
+                "success": success,
+                "timestamp": time.time()
+            }
+            self.send_data(result)
             
         else:
             print(f"알 수 없는 명령: {cmd_type}")
