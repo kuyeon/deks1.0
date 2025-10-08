@@ -36,7 +36,7 @@ ESP32 S3 기반 Deks 로봇의 마이크로파이썬 펌웨어입니다.
   GPIO 13    → 배터리 모니터링 (ADC)
 
 표현 시스템:
-  GPIO 35, 36 → LED 매트릭스 (I2C)
+  GPIO 35~42  → LED 매트릭스 (GPIO 직접 제어)
   GPIO 12     → 버저 (PWM)
 
 상태 표시:
@@ -56,11 +56,15 @@ ESP32 S3 기반 Deks 로봇의 마이크로파이썬 펌웨어입니다.
 
 ```
 firmware/
-├── main.py           # 메인 펌웨어 프로그램
-├── config.py         # 설정 파일
-├── boot.py           # 부트스트랩 파일
-├── test_firmware.py  # 테스트 스크립트
-└── README.md         # 이 파일
+├── main.py                    # 메인 펌웨어 프로그램
+├── config.py                  # 설정 파일
+├── boot.py                    # 부트스트랩 파일
+├── hardware_interface.py      # 하드웨어 인터페이스 모듈
+├── protocol.py                # 통신 프로토콜 최적화
+├── hardware_test_scenarios.py # 종합 테스트 시나리오
+├── test_firmware.py           # 개별 테스트 스크립트
+├── requirements.txt           # 요구사항 및 하드웨어 목록
+└── README.md                  # 이 파일
 ```
 
 ## 🚀 설치 및 실행
@@ -69,20 +73,28 @@ firmware/
 ```bash
 # ESP32 S3용 마이크로파이썬 펌웨어 다운로드
 # https://micropython.org/download/esp32s3/
+
+# mpremote 설치 (Python 패키지)
+pip install mpremote
 ```
 
 ### 2. 펌웨어 업로드
 ```bash
 # esptool을 사용하여 마이크로파이썬 펌웨어 업로드
-esptool.py --chip esp32s3 --port COM3 --baud 460800 write_flash -z 0x0 esp32s3-20231005-v1.21.0.bin
+esptool.py --chip esp32s3 --port COM3 --baud 460800 write_flash -z 0x0 ESP32_GENERIC_S3-20250911-v1.26.1.bin
 ```
 
 ### 3. 파일 업로드
 ```bash
-# ampy 또는 rshell을 사용하여 파일 업로드
-ampy --port COM3 put main.py
-ampy --port COM3 put config.py
-ampy --port COM3 put boot.py
+# mpremote를 사용하여 파일 업로드 (권장)
+mpremote connect COM3 cp main.py :
+mpremote connect COM3 cp config.py :
+mpremote connect COM3 cp boot.py :
+mpremote connect COM3 cp hardware_interface.py :
+mpremote connect COM3 cp protocol.py :
+
+# 또는 한 번에 모든 파일 업로드
+mpremote connect COM3 cp . :
 ```
 
 ### 4. 설정 수정
@@ -99,21 +111,57 @@ SERVER_CONFIG = {
 }
 ```
 
+### 5. mpremote 사용법
+```bash
+# ESP32 연결 및 REPL 접속
+mpremote connect COM3
+
+# 파일 실행
+mpremote connect COM3 exec "import main"
+
+# 파일 다운로드
+mpremote connect COM3 cp :test_results.json .
+
+# 디렉토리 목록 확인
+mpremote connect COM3 ls
+
+# 파일 삭제
+mpremote connect COM3 rm test_results.json
+
+# 하드 리셋
+mpremote connect COM3 reset
+
+# 시리얼 모니터
+mpremote connect COM3
+```
+
 ## 🧪 테스트
 
 ### 펌웨어 테스트 실행
-```python
-# ESP32에서 직접 실행
-import test_firmware
-test_firmware.main()
+```bash
+# mpremote를 사용하여 테스트 실행
+mpremote connect COM3 exec "import test_firmware; test_firmware.main()"
+
+# 또는 종합 테스트 시나리오 실행
+mpremote connect COM3 exec "import hardware_test_scenarios; hardware_test_scenarios.main()"
 ```
 
 ### 개별 테스트
-```python
+```bash
 # 특정 기능만 테스트
+mpremote connect COM3 exec "
+import test_firmware
 tester = test_firmware.FirmwareTester()
 tester.test_sensors()
 tester.test_led_matrix()
+"
+
+# 하드웨어 테스트 시나리오
+mpremote connect COM3 exec "
+import hardware_test_scenarios
+tester = hardware_test_scenarios.HardwareTestScenarios()
+tester.run_all_tests()
+"
 ```
 
 ## 📡 통신 프로토콜
@@ -225,12 +273,34 @@ Wi-Fi 연결 성공: ('192.168.1.100', '255.255.255.0', '192.168.1.1', '8.8.8.8'
 ```
 
 ### 테스트 결과 확인
-```python
-# 테스트 결과 파일 확인
+```bash
+# 테스트 결과 파일 다운로드
+mpremote connect COM3 cp :test_results.json .
+mpremote connect COM3 cp :hardware_test_results.json .
+
+# 로컬에서 결과 확인
+python -c "
 import json
-with open("test_results.json", "r") as f:
+with open('test_results.json', 'r') as f:
     results = json.load(f)
     print(json.dumps(results, indent=2))
+"
+```
+
+### ESP32에서 직접 확인
+```bash
+# ESP32에서 테스트 결과 확인
+mpremote connect COM3 exec "
+import json
+try:
+    with open('test_results.json', 'r') as f:
+        results = json.load(f)
+        print('테스트 결과:')
+        for test, result in results.items():
+            print(f'{test}: {result}')
+except:
+    print('테스트 결과 파일이 없습니다.')
+"
 ```
 
 ## 📞 지원
@@ -248,7 +318,46 @@ with open("test_results.json", "r") as f:
 
 ## 📄 라이선스
 
-이 프로젝트는 MIT 라이선스 하에 배포됩니다.
+이 프로젝트는 언라이센스(Unlicense) 하에 배포됩니다.
+
+### 언라이센스란?
+
+언라이센스는 소프트웨어를 퍼블릭 도메인으로 배포하는 방식입니다. 이는 다음과 같은 의미입니다:
+
+- **자유로운 사용**: 어떤 목적으로든 자유롭게 사용 가능
+- **자유로운 수정**: 코드를 자유롭게 수정하고 개선 가능
+- **자유로운 배포**: 수정된 버전을 자유롭게 배포 가능
+- **자유로운 판매**: 상업적 목적으로도 자유롭게 사용 가능
+- **저작권 포기**: 저작권을 포기하여 공공재로 만듦
+
+### 언라이센스 전문
+
+```
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <http://unlicense.org/>
+```
 
 ---
 
