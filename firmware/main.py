@@ -62,26 +62,43 @@ class DeksRobot:
         """Wi-Fi 연결"""
         print(f"Wi-Fi 연결 시도: {WIFI_SSID}")
         
-        self.wlan.active(True)
-        self.wlan.connect(WIFI_SSID, WIFI_PASSWORD)
-        
-        # 연결 대기 (설정에서 가져온 타임아웃 사용)
-        max_wait = WIFI_CONFIG["timeout"]
-        while max_wait > 0:
-            if self.wlan.status() < 0 or self.wlan.status() >= 3:
-                break
-            max_wait -= 1
-            print(f"Wi-Fi 연결 대기 중... {max_wait}")
-            time.sleep(1)
-        
-        if self.wlan.status() != 3:
-            print("Wi-Fi 연결 실패")
+        try:
+            # Wi-Fi 재초기화
+            self.wlan.active(False)
+            time.sleep_ms(100)
+            self.wlan.active(True)
+            
+            # 이전 연결 해제
+            if self.wlan.isconnected():
+                self.wlan.disconnect()
+                time.sleep_ms(100)
+            
+            # 연결 시도
+            self.wlan.connect(WIFI_SSID, WIFI_PASSWORD)
+            
+            # 연결 대기 (타임아웃: 10초)
+            timeout = WIFI_CONFIG["timeout"] * 1000  # ms로 변환
+            start_time = time.ticks_ms()
+            
+            while not self.wlan.isconnected():
+                if time.ticks_diff(time.ticks_ms(), start_time) > timeout:
+                    print("Wi-Fi 연결 타임아웃")
+                    self.wifi_connected = False
+                    return False
+                time.sleep_ms(100)
+            
+            # 연결 성공
+            ip_info = self.wlan.ifconfig()
+            print(f"Wi-Fi 연결 성공!")
+            print(f"  IP: {ip_info[0]}")
+            print(f"  Gateway: {ip_info[2]}")
+            self.wifi_connected = True
+            return True
+            
+        except Exception as e:
+            print(f"Wi-Fi 연결 실패: {e}")
             self.wifi_connected = False
             return False
-        
-        print(f"Wi-Fi 연결 성공: {self.wlan.ifconfig()}")
-        self.wifi_connected = True
-        return True
     
     def connect_server(self):
         """서버에 TCP 연결"""
@@ -130,8 +147,11 @@ class DeksRobot:
             if data:
                 command = json.loads(data.decode().strip())
                 return command
-        except socket.timeout:
-            pass
+        except OSError as e:
+            # 타임아웃이나 데이터 없음 (EAGAIN)
+            if e.args[0] not in (11, 110, 115):  # EAGAIN, ETIMEDOUT
+                print(f"명령 수신 실패: {e}")
+                self.connected = False
         except Exception as e:
             print(f"명령 수신 실패: {e}")
             self.connected = False
