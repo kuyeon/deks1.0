@@ -243,6 +243,22 @@ class SocketBridgeServer:
                 # 핑 응답 처리
                 await self.connection_manager.update_last_pong(client_id)
                 
+            elif message_type == "status":
+                # ESP32 상태 메시지 처리
+                logger.debug(f"ESP32 상태 수신 - {client_id}")
+                # 센서 데이터 업데이트
+                if "sensors" in message_data:
+                    await self.sensor_manager.process_sensor_data(message_data["sensors"])
+                # 로봇 상태 업데이트
+                await self.robot_controller.update_robot_status({
+                    "battery_level": message_data.get("battery_level", 0),
+                    "motor_speed": message_data.get("motor_speed", 0),
+                    "encoder_counts": message_data.get("encoder_counts", [0, 0]),
+                    "emergency_stop": message_data.get("emergency_stop", False),
+                    "connected": message_data.get("connected", True),
+                    "timestamp": message_data.get("timestamp", 0)
+                })
+                
             else:
                 logger.warning(f"알 수 없는 메시지 타입 - {client_id}: {message_type}")
                 
