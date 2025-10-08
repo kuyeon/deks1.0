@@ -1,0 +1,304 @@
+"""
+Deks 1.0 ESP32 펌웨어 - 메인 제어 프로그램
+마이크로파이썬 기반 ESP32 S3 펌웨어
+
+기능:
+- TCP 클라이언트로 서버와 통신
+- 모터 제어 (FIT0405 + L298N)
+- 센서 데이터 수집 (적외선 센서, 엔코더)
+- LED 매트릭스 표정 제어
+- 버저 소리 제어
+- 배터리 모니터링
+- 최적화된 통신 프로토콜
+- 하드웨어 인터페이스 추상화
+"""
+
+import network
+import socket
+import json
+import time
+import machine
+from machine import Pin, PWM, ADC, I2C
+import uasyncio as asyncio
+from micropython import const
+
+# 로컬 모듈 임포트
+from config import *
+from hardware_interface import HardwareInterface
+from protocol import ProtocolOptimizer, create_optimized_status_message
+
+# 설정에서 상수 가져오기
+SERVER_HOST = SERVER_CONFIG["host"]
+SERVER_PORT = SERVER_CONFIG["port"]
+WIFI_SSID = WIFI_CONFIG["ssid"]
+WIFI_PASSWORD = WIFI_CONFIG["password"]
+
+class DeksRobot:
+    """Deks 로봇 메인 제어 클래스"""
+    
+    def __init__(self):
+        print("Deks 로봇 초기화 시작")
+        
+        # 네트워크 설정
+        self.wlan = network.WLAN(network.STA_IF)
+        self.socket = None
+        self.connected = False
+        
+        # 하드웨어 인터페이스 초기화
+        self.hardware = HardwareInterface(GPIO_CONFIG)
+        
+        # 통신 프로토콜 최적화
+        self.protocol = ProtocolOptimizer()
+        
+        # 상태 변수
+        self.last_heartbeat = time.time()
+        self.message_count = 0
+        
+        print("Deks 로봇 초기화 완료")
+    
+    
+    def connect_wifi(self):
+        """Wi-Fi 연결"""
+        print(f"Wi-Fi 연결 시도: {WIFI_SSID}")
+        
+        self.wlan.active(True)
+        self.wlan.connect(WIFI_SSID, WIFI_PASSWORD)
+        
+        # 연결 대기 (설정에서 가져온 타임아웃 사용)
+        max_wait = WIFI_CONFIG["timeout"]
+        while max_wait > 0:
+            if self.wlan.status() < 0 or self.wlan.status() >= 3:
+                break
+            max_wait -= 1
+            print(f"Wi-Fi 연결 대기 중... {max_wait}")
+            time.sleep(1)
+        
+        if self.wlan.status() != 3:
+            print("Wi-Fi 연결 실패")
+            return False
+        
+        print(f"Wi-Fi 연결 성공: {self.wlan.ifconfig()}")
+        return True
+    
+    def connect_server(self):
+        """서버에 TCP 연결"""
+        print(f"서버 연결 시도: {SERVER_HOST}:{SERVER_PORT}")
+        
+        try:
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket.connect((SERVER_HOST, SERVER_PORT))
+            self.connected = True
+            print("서버 연결 성공")
+            
+            # 연결 성공 표시
+            self.hardware.set_expression("happy")
+            self.hardware.play_sound("start")
+            
+            return True
+            
+        except Exception as e:
+            print(f"서버 연결 실패: {e}")
+            self.connected = False
+            return False
+    
+    def send_data(self, data):
+        """서버에 데이터 전송"""
+        if not self.connected or not self.socket:
+            return False
+        
+        try:
+            message = json.dumps(data) + "\n"
+            self.socket.send(message.encode())
+            return True
+        except Exception as e:
+            print(f"데이터 전송 실패: {e}")
+            self.connected = False
+            return False
+    
+    def receive_command(self):
+        """서버로부터 명령 수신"""
+        if not self.connected or not self.socket:
+            return None
+        
+        try:
+            # 논블로킹 수신
+            self.socket.settimeout(0.1)
+            data = self.socket.recv(1024)
+            if data:
+                command = json.loads(data.decode().strip())
+                return command
+        except socket.timeout:
+            pass
+        except Exception as e:
+            print(f"명령 수신 실패: {e}")
+            self.connected = False
+        
+        return None
+    
+    def update_sensors(self):
+        """센서 데이터 업데이트"""
+        self.hardware.update_sensors()
+    
+    def move_motors(self, left_speed, right_speed):
+        """모터 제어"""
+        return self.hardware.move_robot(left_speed, right_speed)
+    
+    def stop_motors(self):
+        """모터 정지"""
+        self.hardware.stop_robot()
+    
+    def set_expression(self, expression_name):
+        """LED 표정 설정"""
+        self.hardware.set_expression(expression_name)
+    
+    def play_sound(self, sound_name, duration=500):
+        """버저 소리 재생"""
+        self.hardware.play_sound(sound_name)
+    
+    def process_command(self, command):
+        """서버 명령 처리"""
+        cmd_type = command.get("type")
+        
+        if cmd_type == "move":
+            # 이동 명령
+            left_speed = command.get("left_speed", 0)
+            right_speed = command.get("right_speed", 0)
+            self.move_motors(left_speed, right_speed)
+            
+        elif cmd_type == "stop":
+            # 정지 명령
+            self.stop_motors()
+            
+        elif cmd_type == "expression":
+            # 표정 변경
+            expression = command.get("expression", "neutral")
+            self.set_expression(expression)
+            
+        elif cmd_type == "sound":
+            # 소리 재생
+            sound = command.get("sound", "start")
+            duration = command.get("duration", 500)
+            self.play_sound(sound, duration)
+            
+        elif cmd_type == "emergency_stop":
+            # 비상 정지
+            self.hardware.emergency_stop = True
+            self.stop_motors()
+            self.set_expression("error")
+            self.play_sound("error")
+            
+        elif cmd_type == "reset":
+            # 시스템 리셋
+            self.hardware.reset_emergency_stop()
+            self.set_expression("neutral")
+            
+        else:
+            print(f"알 수 없는 명령: {cmd_type}")
+    
+    def send_status(self):
+        """상태 정보 전송"""
+        # 하드웨어 상태 가져오기
+        hardware_status = self.hardware.get_status()
+        
+        status_data = {
+            "type": "status",
+            "timestamp": time.time(),
+            "battery_level": hardware_status["sensors"]["battery_level"],
+            "motor_speed": (hardware_status["motor"]["left_speed"] + hardware_status["motor"]["right_speed"]) / 2,
+            "encoder_counts": hardware_status["motor"]["encoder_counts"],
+            "sensors": hardware_status["sensors"],
+            "emergency_stop": hardware_status["emergency_stop"],
+            "connected": self.connected,
+            "message_count": self.message_count
+        }
+        
+        # 최적화된 메시지 전송
+        optimized_message = self.protocol.create_binary_message("STATUS", status_data)
+        if optimized_message:
+            try:
+                self.socket.send(optimized_message)
+                self.message_count += 1
+            except Exception as e:
+                print(f"최적화된 메시지 전송 실패: {e}")
+                # 폴백: JSON 메시지 전송
+                self.send_data(status_data)
+        else:
+            # 폴백: JSON 메시지 전송
+            self.send_data(status_data)
+    
+    async def main_loop(self):
+        """메인 실행 루프"""
+        print("메인 루프 시작")
+        
+        last_status_send = 0
+        last_heartbeat = time.time()
+        
+        while True:
+            try:
+                # 센서 데이터 업데이트
+                self.update_sensors()
+                
+                # 서버 명령 수신 및 처리
+                command = self.receive_command()
+                if command:
+                    print(f"명령 수신: {command}")
+                    self.process_command(command)
+                    last_heartbeat = time.time()
+                
+                # 주기적 상태 전송 (설정된 간격마다)
+                current_time = time.time()
+                if current_time - last_status_send >= SERVER_CONFIG["heartbeat_interval"]:
+                    self.send_status()
+                    last_status_send = current_time
+                
+                # 하트비트 체크 (5초 이상 명령 없으면 연결 끊김으로 간주)
+                if current_time - last_heartbeat > SERVER_CONFIG["heartbeat_timeout"]:
+                    print("하트비트 타임아웃 - 연결 끊김")
+                    self.connected = False
+                    break
+                
+                # 안전 검사
+                if not self.hardware.check_safety():
+                    print("안전 검사 실패 - 비상 정지")
+                    self.connected = False
+                    break
+                
+                await asyncio.sleep(0.1)  # 100ms 간격
+                
+            except Exception as e:
+                print(f"메인 루프 오류: {e}")
+                await asyncio.sleep(1)
+
+# 메인 실행
+async def main():
+    """메인 함수"""
+    print("Deks 1.0 ESP32 펌웨어 시작")
+    
+    # 로봇 인스턴스 생성
+    robot = DeksRobot()
+    
+    # Wi-Fi 연결
+    if not robot.connect_wifi():
+        print("Wi-Fi 연결 실패 - 프로그램 종료")
+        return
+    
+    # 서버 연결
+    if not robot.connect_server():
+        print("서버 연결 실패 - 프로그램 종료")
+        return
+    
+    # 메인 루프 실행
+    try:
+        await robot.main_loop()
+    except KeyboardInterrupt:
+        print("프로그램 중단")
+    finally:
+        # 정리 작업
+        robot.stop_motors()
+        if robot.socket:
+            robot.socket.close()
+        print("프로그램 종료")
+
+# 프로그램 실행
+if __name__ == "__main__":
+    asyncio.run(main())
