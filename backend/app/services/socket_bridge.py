@@ -229,7 +229,8 @@ class SocketBridgeServer:
                 
             elif message_type == "command_result":
                 # 명령 실행 결과 처리
-                await self.robot_controller.handle_command_result(message_data.get("data", {}))
+                # ESP32가 전체 메시지를 보내므로 data 필드가 아닌 전체 메시지 전달
+                await self.robot_controller.handle_command_result(message_data)
                 
             elif message_type == "robot_status":
                 # 로봇 상태 업데이트

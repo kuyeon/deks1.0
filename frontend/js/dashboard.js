@@ -504,7 +504,7 @@ class DeksDashboard {
     displayCommandHistory() {
         const container = document.getElementById('commandHistory');
         if (!container) {
-            console.warn('commandHistory 요소를 찾을 수 없습니다.');
+            // commandHistory 요소가 없으면 조용히 무시
             return;
         }
         
