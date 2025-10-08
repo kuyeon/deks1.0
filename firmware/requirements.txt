@@ -18,7 +18,8 @@
 # 소프트웨어 요구사항
 # - 마이크로파이썬 펌웨어 (ESP32-S3용)
 # - esptool.py (펌웨어 업로드용)
-# - ampy 또는 rshell (파일 업로드용)
+# - mpremote (파일 업로드 및 통신용, 권장)
+# - ampy 또는 rshell (대안)
 
 # 네트워크 요구사항
 # - Wi-Fi 네트워크 접근
@@ -28,7 +29,8 @@
 # 개발 도구
 # - Python 3.7+ (개발 환경)
 # - esptool.py
-# - ampy 또는 rshell
+# - mpremote (pip install mpremote)
+# - ampy 또는 rshell (대안)
 # - 시리얼 터미널 (115200 bps)
 
 # 테스트 도구

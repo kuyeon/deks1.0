@@ -5,15 +5,15 @@ Deks 1.0 ESP32 펌웨어 설정 파일
 
 # 네트워크 설정
 WIFI_CONFIG = {
-    "ssid": "your_wifi_ssid",        # 실제 Wi-Fi SSID로 변경
-    "password": "your_wifi_password", # 실제 Wi-Fi 비밀번호로 변경
+    "ssid": "Kuyeon_iPhone",         # 실제 Wi-Fi SSID
+    "password": "pky753159!",        # 실제 Wi-Fi 비밀번호
     "timeout": 10                    # 연결 타임아웃 (초)
 }
 
 # 서버 설정
 SERVER_CONFIG = {
-    "host": "192.168.1.100",         # 서버 IP 주소 (실제 환경에 맞게 수정)
-    "port": 8888,                    # 서버 포트
+    "host": "172.20.10.10",          # 서버 IP 주소 (실제 IP)
+    "port": 8888,                    # 로봇 TCP 포트
     "timeout": 5,                    # 소켓 타임아웃 (초)
     "heartbeat_interval": 1.0,       # 하트비트 전송 간격 (초)
     "heartbeat_timeout": 5.0         # 하트비트 타임아웃 (초)
@@ -37,9 +37,15 @@ GPIO_CONFIG = {
     "sensor_drop": 10,       # 낙하 방지 센서
     "sensor_obstacle": 11,   # 장애물 감지 센서
     
-    # LED 매트릭스 (I2C)
-    "led_sda": 35,
-    "led_scl": 36,
+    # LED 매트릭스 (GPIO 직접 제어)
+    "led_row_0": 35,
+    "led_row_1": 36,
+    "led_row_2": 37,
+    "led_row_3": 38,
+    "led_row_4": 39,
+    "led_row_5": 40,
+    "led_row_6": 41,
+    "led_row_7": 42,
     
     # 버저
     "buzzer": 12,
@@ -48,7 +54,11 @@ GPIO_CONFIG = {
     "battery": 13,
     
     # 상태 LED
-    "status_led": 14
+    "status_led": 14,
+    
+    # 시리얼 디버그
+    "serial_tx": 1,
+    "serial_rx": 0
 }
 
 # 모터 설정
@@ -70,10 +80,12 @@ SENSOR_CONFIG = {
 
 # LED 매트릭스 설정
 LED_CONFIG = {
-    "i2c_address": 0x70,             # I2C 주소
-    "i2c_frequency": 400000,         # I2C 주파수 (Hz)
+    "scan_frequency": 1000,          # 스캔 주파수 (Hz)
     "brightness": 8,                 # 밝기 (0-15)
-    "animation_speed": 100           # 애니메이션 속도 (ms)
+    "animation_speed": 100,          # 애니메이션 속도 (ms)
+    "pwm_frequency": 1000,           # PWM 주파수 (Hz)
+    "row_count": 8,                  # 행 수
+    "col_count": 8                   # 열 수
 }
 
 # 버저 설정

@@ -14,7 +14,8 @@ def system_init():
     
     # 시스템 정보 출력
     print(f"CPU 주파수: {machine.freq()} Hz")
-    print(f"메모리 정보: {machine.mem_info()}")
+    print(f"메모리 여유: {gc.mem_free()} bytes")
+    print(f"메모리 할당: {gc.mem_alloc()} bytes")
     
     # GPIO 초기화
     _init_gpio()
@@ -100,31 +101,35 @@ def check_hardware():
     return True
 
 def led_test():
-    """LED 테스트"""
+    """LED 테스트 (GPIO 직접 제어)"""
     print("LED 테스트 시작")
     
     try:
-        # I2C 초기화
-        i2c = machine.I2C(0, sda=machine.Pin(35), scl=machine.Pin(36), freq=400000)
+        # LED 매트릭스 행 핀 초기화
+        led_pins = [35, 36, 37, 38, 39, 40, 41, 42]
+        row_pins = []
         
-        # LED 매트릭스 주소 스캔
-        devices = i2c.scan()
-        print(f"I2C 장치 주소: {devices}")
+        for pin_num in led_pins:
+            pin = machine.Pin(pin_num, machine.Pin.OUT)
+            pin.off()
+            row_pins.append(pin)
         
-        if 0x70 in devices:
-            print("LED 매트릭스 연결 확인됨")
-            
-            # 간단한 테스트 패턴 전송
-            test_pattern = [0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00]
-            i2c.writeto(0x70, bytes(test_pattern))
-            time.sleep(1)
-            
-            # 패턴 지우기
-            clear_pattern = [0x00] * 8
-            i2c.writeto(0x70, bytes(clear_pattern))
-            
-        else:
-            print("경고: LED 매트릭스를 찾을 수 없습니다")
+        print("LED 매트릭스 GPIO 핀 초기화 완료")
+        
+        # 간단한 테스트 패턴 표시
+        print("테스트 패턴 표시 중...")
+        for i in range(3):  # 3번 반복
+            for row in range(8):
+                row_pins[row].on()
+                time.sleep_ms(50)
+                row_pins[row].off()
+                time.sleep_ms(50)
+        
+        # 모든 핀 끄기
+        for pin in row_pins:
+            pin.off()
+        
+        print("LED 테스트 완료")
             
     except Exception as e:
         print(f"LED 테스트 실패: {e}")

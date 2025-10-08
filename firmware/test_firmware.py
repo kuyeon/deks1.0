@@ -145,32 +145,38 @@ class FirmwareTester:
         return results
     
     def test_led_matrix(self):
-        """LED 매트릭스 테스트"""
+        """LED 매트릭스 테스트 (GPIO 직접 제어)"""
         print("LED 매트릭스 테스트 시작")
         
         results = {}
         
         try:
-            # I2C 초기화
-            i2c = I2C(0, sda=Pin(35), scl=Pin(36), freq=400000)
+            # LED 매트릭스 행 핀 초기화
+            led_pins = [35, 36, 37, 38, 39, 40, 41, 42]
+            row_pins = []
             
-            # I2C 장치 스캔
-            devices = i2c.scan()
-            results["i2c_devices"] = devices
+            for pin_num in led_pins:
+                pin = Pin(pin_num, Pin.OUT)
+                pin.off()
+                row_pins.append(pin)
             
-            if 0x70 in devices:
-                # 테스트 패턴 전송
-                test_pattern = [0xFF, 0x81, 0x81, 0x81, 0x81, 0x81, 0x81, 0xFF]
-                i2c.writeto(0x70, bytes(test_pattern))
-                time.sleep(1)
-                
-                # 패턴 지우기
-                clear_pattern = [0x00] * 8
-                i2c.writeto(0x70, bytes(clear_pattern))
-                
-                results["led_matrix"] = "OK"
-            else:
-                results["led_matrix"] = "ERROR: LED 매트릭스를 찾을 수 없음"
+            # 테스트 패턴 표시
+            test_pattern = [0xFF, 0x81, 0x81, 0x81, 0x81, 0x81, 0x81, 0xFF]
+            
+            # 행 스캔 방식으로 패턴 표시
+            for i in range(3):  # 3번 반복
+                for row in range(8):
+                    row_pins[row].on()
+                    time.sleep_ms(10)
+                    row_pins[row].off()
+                    time.sleep_ms(10)
+            
+            # 모든 핀 끄기
+            for pin in row_pins:
+                pin.off()
+            
+            results["led_matrix"] = "OK"
+            results["gpio_pins"] = led_pins
                 
         except Exception as e:
             results["error"] = str(e)

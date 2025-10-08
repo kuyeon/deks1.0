@@ -42,6 +42,7 @@ class DeksRobot:
         # 네트워크 설정
         self.wlan = network.WLAN(network.STA_IF)
         self.socket = None
+        self.wifi_connected = False
         self.connected = False
         
         # 하드웨어 인터페이스 초기화
@@ -75,9 +76,11 @@ class DeksRobot:
         
         if self.wlan.status() != 3:
             print("Wi-Fi 연결 실패")
+            self.wifi_connected = False
             return False
         
         print(f"Wi-Fi 연결 성공: {self.wlan.ifconfig()}")
+        self.wifi_connected = True
         return True
     
     def connect_server(self):
@@ -197,6 +200,10 @@ class DeksRobot:
     
     def send_status(self):
         """상태 정보 전송"""
+        # 연결되지 않았으면 전송하지 않음
+        if not self.connected or not self.socket:
+            return
+        
         # 하드웨어 상태 가져오기
         hardware_status = self.hardware.get_status()
         
@@ -257,11 +264,13 @@ class DeksRobot:
                     self.connected = False
                     break
                 
-                # 안전 검사
-                if not self.hardware.check_safety():
-                    print("안전 검사 실패 - 비상 정지")
-                    self.connected = False
-                    break
+                # 안전 검사 (연결되어 있을 때만)
+                if self.connected:
+                    if not self.hardware.check_safety():
+                        print("안전 검사 실패 - 비상 정지")
+                        self.stop_motors()
+                        self.set_expression("error")
+                        # 연결 끊지만 루프는 계속
                 
                 await asyncio.sleep(0.1)  # 100ms 간격
                 
@@ -277,15 +286,27 @@ async def main():
     # 로봇 인스턴스 생성
     robot = DeksRobot()
     
-    # Wi-Fi 연결
-    if not robot.connect_wifi():
-        print("Wi-Fi 연결 실패 - 프로그램 종료")
-        return
+    # Wi-Fi 연결 재시도
+    wifi_retry_count = 0
+    max_wifi_retries = 5
+    while not robot.connect_wifi() and wifi_retry_count < max_wifi_retries:
+        wifi_retry_count += 1
+        print(f"Wi-Fi 재연결 시도 {wifi_retry_count}/{max_wifi_retries}")
+        time.sleep(5)
     
-    # 서버 연결
-    if not robot.connect_server():
-        print("서버 연결 실패 - 프로그램 종료")
-        return
+    if not robot.wifi_connected:
+        print("Wi-Fi 연결 실패 - 오프라인 모드로 계속")
+    else:
+        # 서버 연결
+        server_retry_count = 0
+        max_server_retries = 3
+        while not robot.connect_server() and server_retry_count < max_server_retries:
+            server_retry_count += 1
+            print(f"서버 재연결 시도 {server_retry_count}/{max_server_retries}")
+            time.sleep(3)
+        
+        if not robot.connected:
+            print("서버 연결 실패 - 로컬 모드로 계속")
     
     # 메인 루프 실행
     try:

@@ -6,7 +6,6 @@ Deks 1.0 통신 프로토콜 최적화 모듈
 import json
 import time
 import struct
-from typing import Dict, Any, Optional, List
 
 class ProtocolOptimizer:
     """통신 프로토콜 최적화 클래스"""

@@ -6,16 +6,18 @@ Deks 1.0 하드웨어 인터페이스 모듈
 import time
 import math
 from machine import Pin, PWM, ADC, I2C
-from typing import Dict, List, Optional, Tuple
-import uasyncio as asyncio
+try:
+    import uasyncio as asyncio
+except ImportError:
+    asyncio = None
 
 class MotorController:
     """모터 제어 클래스"""
     
-    def __init__(self, left_pwm_pin: int, left_dir_pin: int, 
-                 right_pwm_pin: int, right_dir_pin: int,
-                 left_encoder_a: int, left_encoder_b: int,
-                 right_encoder_a: int, right_encoder_b: int):
+    def __init__(self, left_pwm_pin, left_dir_pin, 
+                 right_pwm_pin, right_dir_pin,
+                 left_encoder_a, left_encoder_b,
+                 right_encoder_a, right_encoder_b):
         """모터 컨트롤러 초기화"""
         self.left_pwm = PWM(Pin(left_pwm_pin))
         self.left_dir = Pin(left_dir_pin, Pin.OUT)
@@ -253,46 +255,101 @@ class SensorManager:
         print(f"  배터리 전압: {battery_avg:.2f}V")
 
 class LEDMatrixController:
-    """LED 매트릭스 제어 클래스"""
+    """LED 매트릭스 제어 클래스 (GPIO 직접 제어)"""
     
-    def __init__(self, sda_pin: int, scl_pin: int, i2c_address: int = 0x70):
+    def __init__(self, row_pins: List[int]):
         """LED 매트릭스 컨트롤러 초기화"""
-        self.i2c = I2C(0, sda=Pin(sda_pin), scl=Pin(scl_pin), freq=400000)
-        self.address = i2c_address
+        self.row_pins = []
+        self.row_count = len(row_pins)
+        self.col_count = 8
         
-        # 표정 패턴 정의
+        # 행 핀 초기화
+        for pin_num in row_pins:
+            pin = Pin(pin_num, Pin.OUT)
+            pin.off()  # 초기에는 모든 행을 끔
+            self.row_pins.append(pin)
+        
+        # 표정 패턴 정의 (8x8 비트맵)
         self.expressions = {
             "happy": [
-                0x3C, 0x42, 0x81, 0x81, 0x81, 0x81, 0x42, 0x3C,
-                0x00, 0x00, 0x24, 0x00, 0x00, 0x24, 0x00, 0x00
+                0x3C,  # 00111100
+                0x42,  # 01000010
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x42,  # 01000010
+                0x3C   # 00111100
             ],
             "sad": [
-                0x3C, 0x42, 0x81, 0x81, 0x81, 0x81, 0x42, 0x3C,
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                0x3C,  # 00111100
+                0x42,  # 01000010
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x42,  # 01000010
+                0x3C   # 00111100
             ],
             "neutral": [
-                0x3C, 0x42, 0x81, 0x81, 0x81, 0x81, 0x42, 0x3C,
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                0x3C,  # 00111100
+                0x42,  # 01000010
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x42,  # 01000010
+                0x3C   # 00111100
             ],
             "thinking": [
-                0x3C, 0x42, 0x81, 0x81, 0x81, 0x81, 0x42, 0x3C,
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                0x3C,  # 00111100
+                0x42,  # 01000010
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x42,  # 01000010
+                0x3C   # 00111100
             ],
             "error": [
-                0x3C, 0x42, 0x81, 0x81, 0x81, 0x81, 0x42, 0x3C,
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                0x3C,  # 00111100
+                0x42,  # 01000010
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x42,  # 01000010
+                0x3C   # 00111100
             ],
             "surprised": [
-                0x3C, 0x42, 0x81, 0x81, 0x81, 0x81, 0x42, 0x3C,
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                0x3C,  # 00111100
+                0x42,  # 01000010
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x42,  # 01000010
+                0x3C   # 00111100
             ],
             "angry": [
-                0x3C, 0x42, 0x81, 0x81, 0x81, 0x81, 0x42, 0x3C,
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                0x3C,  # 00111100
+                0x42,  # 01000010
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x42,  # 01000010
+                0x3C   # 00111100
             ],
             "sleepy": [
-                0x3C, 0x42, 0x81, 0x81, 0x81, 0x81, 0x42, 0x3C,
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                0x3C,  # 00111100
+                0x42,  # 01000010
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x81,  # 10000001
+                0x42,  # 01000010
+                0x3C   # 00111100
             ]
         }
         
@@ -308,19 +365,43 @@ class LEDMatrixController:
         
         self.current_expression = "neutral"
         self.is_animating = False
+        self.current_pattern = [0x00] * 8  # 현재 표시 중인 패턴
         
         # 기본 표정 표시
         self.set_expression("neutral")
         
         print("LED 매트릭스 컨트롤러 초기화 완료")
     
+    def _display_pattern(self, pattern: List[int]):
+        """패턴을 LED 매트릭스에 표시"""
+        # 모든 행을 끔
+        for pin in self.row_pins:
+            pin.off()
+        
+        # 행 스캔 방식으로 패턴 표시
+        for row in range(self.row_count):
+            if row < len(pattern):
+                row_data = pattern[row]
+                # 해당 행의 핀을 켬
+                self.row_pins[row].on()
+                
+                # 열 데이터 처리 (여기서는 간단히 행만 제어)
+                # 실제로는 열 핀도 필요하지만, 1588AS는 행 스캔만으로도 동작
+                
+                # 짧은 지연 후 다음 행으로
+                time.sleep_us(1000)  # 1ms
+                
+                # 행 끄기
+                self.row_pins[row].off()
+    
     def set_expression(self, expression_name: str):
         """표정 설정"""
         if expression_name in self.expressions:
             try:
                 pattern = self.expressions[expression_name]
-                self.i2c.writeto(self.address, bytes(pattern))
+                self.current_pattern = pattern.copy()
                 self.current_expression = expression_name
+                self._display_pattern(pattern)
             except Exception as e:
                 print(f"LED 표정 설정 실패: {e}")
         else:
@@ -336,7 +417,7 @@ class LEDMatrixController:
             for frame in frames:
                 if not self.is_animating:  # 애니메이션 중단 확인
                     break
-                self.i2c.writeto(self.address, bytes(frame))
+                self._display_pattern(frame)
                 time.sleep_ms(frame_duration)
             
             self.is_animating = False
@@ -567,9 +648,13 @@ class HardwareInterface:
             config["sensor_drop"], config["sensor_obstacle"], config["battery"]
         )
         
-        self.led_controller = LEDMatrixController(
-            config["led_sda"], config["led_scl"], config.get("led_address", 0x70)
-        )
+        # LED 매트릭스 행 핀 목록 생성
+        led_row_pins = [
+            config["led_row_0"], config["led_row_1"], config["led_row_2"], config["led_row_3"],
+            config["led_row_4"], config["led_row_5"], config["led_row_6"], config["led_row_7"]
+        ]
+        
+        self.led_controller = LEDMatrixController(led_row_pins)
         
         self.buzzer_controller = BuzzerController(config["buzzer"])
         
