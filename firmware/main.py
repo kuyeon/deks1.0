@@ -109,7 +109,7 @@ class DeksRobot:
         
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.socket.settimeout(10)  # 10초 타임아웃
+            self.socket.settimeout(3)  # 3초 타임아웃
             print(f"소켓 생성 완료, 연결 시도 중...")
             self.socket.connect((SERVER_HOST, SERVER_PORT))
             self.socket.settimeout(None)  # 연결 후 타임아웃 해제
@@ -440,8 +440,8 @@ async def main():
                 if robot.connect_wifi():
                     print("Wi-Fi 재연결 성공")
                 else:
-                    print("Wi-Fi 재연결 실패 - 5초 후 재시도")
-                    await asyncio.sleep(5)
+                    print("Wi-Fi 재연결 실패 - 2초 후 재시도")
+                    await asyncio.sleep(2)
                     continue
             
             if not robot.connected:
@@ -449,8 +449,8 @@ async def main():
                 if robot.connect_server():
                     print("서버 재연결 성공")
                 else:
-                    print("서버 재연결 실패 - 3초 후 재시도")
-                    await asyncio.sleep(3)
+                    print("서버 재연결 실패 - 1초 후 재시도")
+                    await asyncio.sleep(1)
                     continue
             
             # 메인 루프 실행

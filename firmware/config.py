@@ -7,7 +7,7 @@ Deks 1.0 ESP32 펌웨어 설정 파일
 WIFI_CONFIG = {
     "ssid": "Kuyeon_iPhone",         # 실제 Wi-Fi SSID
     "password": "pky753159!",        # 실제 Wi-Fi 비밀번호
-    "timeout": 10                    # 연결 타임아웃 (초)
+    "timeout": 5                     # 연결 타임아웃 (초)
 }
 
 # 서버 설정
