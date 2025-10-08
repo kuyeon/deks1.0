@@ -417,38 +417,37 @@ class ChatService:
                 if extracted_name:
                     extracted_info["user_name"] = extracted_name
             
-            # 로봇 명령 실행 (intent가 command인 경우)
-            if intent == "command":
+            # 로봇 명령 실행 (intent가 robot_ 로 시작하는 경우)
+            if intent.startswith("robot_"):
                 try:
-                    from app.api.v1.endpoints.nlp import parse_natural_language_command
                     from app.services.socket_bridge import get_socket_bridge
                     
-                    # 자연어 명령 파싱
-                    parsed_result = parse_natural_language_command(message)
+                    # Socket Bridge를 통해 로봇 명령 실행
+                    socket_bridge = await get_socket_bridge()
+                    robot_controller = socket_bridge.robot_controller
                     
-                    if parsed_result["action"]:
-                        # Socket Bridge를 통해 로봇 명령 실행
-                        socket_bridge = await get_socket_bridge()
-                        robot_controller = socket_bridge.robot_controller
-                        
-                        action = parsed_result["action"]
-                        parameters = parsed_result["parameters"] or {}
-                        
-                        if action == "move_forward":
-                            await robot_controller.move_forward(
-                                parameters.get("speed", 50),
-                                parameters.get("distance", 100)
-                            )
-                        elif action == "turn_left":
-                            await robot_controller.turn_left(parameters.get("angle", 90))
-                        elif action == "turn_right":
-                            await robot_controller.turn_right(parameters.get("angle", 90))
-                        elif action == "stop":
-                            await robot_controller.stop()
-                        elif action == "spin":
-                            await robot_controller.spin(parameters.get("rotations", 1))
-                        
-                        logger.info(f"자연어 명령 실행: {action}")
+                    # intent에 따라 명령 실행
+                    if intent == "robot_move_forward":
+                        await robot_controller.move_forward(speed=50, distance=100)
+                        logger.info(f"로봇 전진 명령 실행")
+                    elif intent == "robot_turn":
+                        # 메시지에서 방향 판단
+                        if any(keyword in message for keyword in ["왼쪽", "좌회전"]):
+                            await robot_controller.turn_left(angle=90)
+                            logger.info(f"로봇 좌회전 명령 실행")
+                        elif any(keyword in message for keyword in ["오른쪽", "우회전"]):
+                            await robot_controller.turn_right(angle=90)
+                            logger.info(f"로봇 우회전 명령 실행")
+                        else:
+                            await robot_controller.turn_right(angle=90)
+                            logger.info(f"로봇 회전 명령 실행 (기본: 우회전)")
+                    elif intent == "robot_stop":
+                        await robot_controller.stop()
+                        logger.info(f"로봇 정지 명령 실행")
+                    elif intent == "robot_spin":
+                        await robot_controller.spin(rotations=1)
+                        logger.info(f"로봇 빙글빙글 명령 실행")
+                    
                 except Exception as e:
                     logger.error(f"로봇 명령 실행 중 오류: {e}")
             
