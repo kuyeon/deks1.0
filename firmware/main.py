@@ -48,6 +48,9 @@ class DeksRobot:
         # 하드웨어 인터페이스 초기화
         self.hardware = HardwareInterface(GPIO_CONFIG)
         
+        # 비상 정지 해제 (초기화 시)
+        self.hardware.emergency_stop = False
+        
         # 통신 프로토콜 최적화
         self.protocol = ProtocolOptimizer()
         
