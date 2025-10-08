@@ -231,6 +231,45 @@ class DeksRobot:
             # 하트비트 간격 업데이트
             if 'heartbeat_interval' in command:
                 print(f"하트비트 간격: {command['heartbeat_interval']}초")
+        
+        elif cmd_type == "ping":
+            # 핑 메시지 수신 - pong 응답
+            pong = {"type": "pong", "timestamp": time.time()}
+            self.send_data(pong)
+            
+        elif cmd_type == "command":
+            # 중첩된 명령 처리
+            inner_command = command.get("command", {})
+            inner_type = inner_command.get("type")
+            
+            if inner_type == "forward":
+                # 전진 명령
+                speed = inner_command.get("speed", 50)
+                distance = inner_command.get("distance", 0)
+                print(f"전진: 속도 {speed}, 거리 {distance}")
+                self.move_motors(speed, speed)
+                
+            elif inner_type == "backward":
+                # 후진 명령
+                speed = inner_command.get("speed", 50)
+                distance = inner_command.get("distance", 0)
+                print(f"후진: 속도 {speed}, 거리 {distance}")
+                self.move_motors(-speed, -speed)
+                
+            elif inner_type == "turn_left":
+                # 좌회전 명령
+                angle = inner_command.get("angle", 90)
+                print(f"좌회전: {angle}도")
+                self.move_motors(-50, 50)
+                
+            elif inner_type == "turn_right":
+                # 우회전 명령
+                angle = inner_command.get("angle", 90)
+                print(f"우회전: {angle}도")
+                self.move_motors(50, -50)
+                
+            else:
+                print(f"알 수 없는 내부 명령: {inner_type}")
             
         else:
             print(f"알 수 없는 명령: {cmd_type}")
