@@ -503,6 +503,11 @@ class DeksDashboard {
      */
     displayCommandHistory() {
         const container = document.getElementById('commandHistory');
+        if (!container) {
+            console.warn('commandHistory 요소를 찾을 수 없습니다.');
+            return;
+        }
+        
         container.innerHTML = '';
 
         this.commandHistory.slice(0, 5).forEach(item => {
