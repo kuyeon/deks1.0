@@ -151,8 +151,16 @@ class DeksRobot:
             self.socket.send(encoded_message)
             return True
         except OSError as e:
-            # 타임아웃 에러는 무시하고 계속
-            if e.args[0] in (116, 110):  # ETIMEDOUT, ECONNRESET은 재시도
+            # 연결 끊김 에러 - 즉시 재연결
+            if e.args[0] in (104, 110, 116):  # ECONNRESET, ETIMEDOUT
+                print(f"연결 끊김 감지 - 재연결 필요")
+                self.connected = False
+                # 소켓 즉시 닫기
+                try:
+                    self.socket.close()
+                except:
+                    pass
+                self.socket = None
                 return False
             else:
                 print(f"데이터 전송 실패: {e}")
@@ -387,6 +395,11 @@ class DeksRobot:
                 if current_time - last_status_send >= SERVER_CONFIG["heartbeat_interval"]:
                     self.send_status()
                     last_status_send = current_time
+                
+                # 연결 끊김 확인 (즉시)
+                if not self.connected:
+                    print("연결 끊김 감지 - 즉시 재연결")
+                    break
                 
                 # 하트비트 체크 (60초 이상 명령 없으면 연결 끊김으로 간주)
                 if current_time - last_heartbeat > 60:
