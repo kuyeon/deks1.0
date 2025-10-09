@@ -28,6 +28,12 @@ class MotorController:
         self.left_pwm.freq(1000)
         self.right_pwm.freq(1000)
         
+        # 모터 정지 상태로 초기화
+        self.left_pwm.duty(0)
+        self.right_pwm.duty(0)
+        self.left_dir.off()
+        self.right_dir.off()
+        
         # 엔코더 설정
         self.left_encoder_a = Pin(left_encoder_a, Pin.IN, Pin.PULL_UP)
         self.left_encoder_b = Pin(left_encoder_b, Pin.IN, Pin.PULL_UP)
@@ -106,11 +112,15 @@ class MotorController:
     
     def stop(self):
         """모터 정지"""
+        print("MotorController.stop 호출")
         self.left_pwm.duty(0)
         self.right_pwm.duty(0)
+        self.left_dir.off()
+        self.right_dir.off()
         self.left_speed = 0
         self.right_speed = 0
         self.is_moving = False
+        print("모터 완전 정지 완료")
     
     def get_encoder_counts(self) -> Dict[str, int]:
         """엔코더 카운트 반환"""
@@ -715,7 +725,9 @@ class HardwareInterface:
     
     def stop_robot(self):
         """로봇 정지"""
+        print("로봇 정지 명령 수신")
         self.motor_controller.stop()
+        print("로봇 정지 명령 완료")
     
     def set_expression(self, expression: str):
         """표정 설정"""

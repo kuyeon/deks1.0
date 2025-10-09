@@ -5,14 +5,14 @@ Deks 1.0 ESP32 펌웨어 설정 파일
 
 # 네트워크 설정
 WIFI_CONFIG = {
-    "ssid": "Kuyeon_iPhone",         # 실제 Wi-Fi SSID
-    "password": "pky753159!",        # 실제 Wi-Fi 비밀번호
+    "ssid": "kuyeon_room",           # 실제 Wi-Fi SSID
+    "password": "pky44684468",       # 실제 Wi-Fi 비밀번호
     "timeout": 5                     # 연결 타임아웃 (초)
 }
 
 # 서버 설정
 SERVER_CONFIG = {
-    "host": "172.20.10.10",          # 서버 IP 주소 (실제 IP)
+    "host": "192.168.0.5",           # 서버 IP 주소 (실제 IP)
     "port": 8888,                    # 로봇 TCP 포트
     "timeout": 5,                    # 소켓 타임아웃 (초)
     "heartbeat_interval": 1.0,       # 하트비트 전송 간격 (초)

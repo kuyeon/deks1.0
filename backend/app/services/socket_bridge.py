@@ -384,7 +384,7 @@ async def get_socket_bridge() -> SocketBridgeServer:
     """전역 Socket Bridge 인스턴스 반환"""
     global socket_bridge_server
     if socket_bridge_server is None:
-        socket_bridge_server = SocketBridgeServer()
+        socket_bridge_server = SocketBridgeServer(host="192.168.0.5", port=8888)
     return socket_bridge_server
 
 
@@ -392,7 +392,7 @@ async def start_socket_bridge():
     """Socket Bridge 서버 시작 (FastAPI에서 호출)"""
     global socket_bridge_server
     if socket_bridge_server is None:
-        socket_bridge_server = SocketBridgeServer()
+        socket_bridge_server = SocketBridgeServer(host="192.168.0.5", port=8888)
     
     # 백그라운드에서 서버 시작
     asyncio.create_task(socket_bridge_server.start_server())
