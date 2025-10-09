@@ -1,0 +1,298 @@
+"""
+데이터베이스 초기화 모듈
+"""
+
+import sqlite3
+import os
+from pathlib import Path
+from loguru import logger
+
+from app.core.config import get_settings
+
+
+def get_database_path() -> str:
+    """데이터베이스 파일 경로를 반환합니다."""
+    settings = get_settings()
+    db_url = settings.database_url
+    
+    if db_url.startswith("sqlite:///"):
+        db_path = db_url.replace("sqlite:///", "")
+        return db_path
+    else:
+        return "deks.db"
+
+
+def create_tables():
+    """데이터베이스 테이블을 생성합니다."""
+    db_path = get_database_path()
+    
+    # 데이터베이스 디렉토리 생성
+    db_dir = Path(db_path).parent
+    db_dir.mkdir(parents=True, exist_ok=True)
+    
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    try:
+        # 사용자 상호작용 테이블
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_interactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                command TEXT NOT NULL,
+                response TEXT,
+                success BOOLEAN,
+                user_id TEXT DEFAULT 'default_user',
+                session_id TEXT,
+                command_id TEXT,
+                confidence REAL,
+                execution_time REAL
+            )
+        """)
+        
+        # 명령어 빈도 테이블
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS command_frequency (
+                command TEXT PRIMARY KEY,
+                count INTEGER DEFAULT 1,
+                success_count INTEGER DEFAULT 0,
+                last_used DATETIME DEFAULT CURRENT_TIMESTAMP,
+                avg_confidence REAL DEFAULT 0.0
+            )
+        """)
+        
+        # 에러 패턴 테이블
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS error_patterns (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                failed_command TEXT,
+                error_type TEXT,
+                user_id TEXT,
+                error_message TEXT,
+                context TEXT
+            )
+        """)
+        
+        # 감정 반응 테이블
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS emotion_responses (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                emotion TEXT,
+                trigger_command TEXT,
+                user_satisfaction INTEGER CHECK(user_satisfaction >= 1 AND user_satisfaction <= 5),
+                user_id TEXT,
+                session_id TEXT
+            )
+        """)
+        
+        # 로봇 상태 테이블
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS robot_states (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                robot_id TEXT DEFAULT 'deks_001',
+                position_x REAL,
+                position_y REAL,
+                orientation REAL,
+                battery_level INTEGER,
+                is_moving BOOLEAN,
+                safety_mode TEXT,
+                sensor_data TEXT,  -- JSON 형태로 저장
+                connection_status TEXT
+            )
+        """)
+        
+        # 센서 데이터 테이블
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS sensor_data (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                robot_id TEXT DEFAULT 'deks_001',
+                front_distance REAL,
+                left_distance REAL,
+                right_distance REAL,
+                drop_detected BOOLEAN,
+                battery_voltage REAL,
+                temperature REAL
+            )
+        """)
+        
+        # 채팅 대화 테이블
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS chat_conversations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                conversation_id TEXT UNIQUE,
+                user_id TEXT NOT NULL,
+                session_id TEXT,
+                start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+                end_time DATETIME,
+                conversation_type TEXT,
+                total_messages INTEGER DEFAULT 0,
+                last_message_time DATETIME
+            )
+        """)
+        
+        # 채팅 메시지 테이블
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS chat_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                message_id TEXT UNIQUE,
+                conversation_id TEXT,
+                user_id TEXT NOT NULL,
+                session_id TEXT,
+                user_message TEXT NOT NULL,
+                robot_response TEXT NOT NULL,
+                emotion_detected TEXT,
+                emotion_responded TEXT,
+                conversation_type TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (conversation_id) REFERENCES chat_conversations(conversation_id)
+            )
+        """)
+        
+        # 사용자 프로필 테이블
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_profiles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT UNIQUE NOT NULL,
+                user_name TEXT,
+                preferred_style TEXT,
+                conversation_history_count INTEGER DEFAULT 0,
+                last_interaction DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # 채팅 컨텍스트 테이블
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS chat_contexts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                session_id TEXT,
+                user_name TEXT,
+                conversation_count INTEGER DEFAULT 0,
+                last_interaction DATETIME,
+                robot_mood TEXT DEFAULT 'friendly',
+                current_topic TEXT,
+                remembered_info TEXT,  -- JSON 형태로 저장
+                last_update DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, session_id)
+            )
+        """)
+        
+        # 감정 업데이트 테이블
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS emotion_updates (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                emotion TEXT NOT NULL,
+                reason TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # 학습 데이터 테이블
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS learning_data (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                interaction_data TEXT,  -- JSON 형태로 저장
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # 사용자 장기 기억 테이블 (3순위: Chat Interaction API 고도화)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_long_term_memory (
+                user_id TEXT PRIMARY KEY,
+                user_name TEXT,
+                preferred_name TEXT,
+                personality_traits TEXT,  -- JSON: {"polite": 0.8, "curious": 0.6}
+                interests TEXT,  -- JSON: ["로봇", "AI", "코딩"]
+                preferences TEXT,  -- JSON: {"response_style": "casual", "detail_level": "medium"}
+                learned_patterns TEXT,  -- JSON: {"greeting": 15, "command": 30}
+                total_interactions INTEGER DEFAULT 0,
+                first_met DATETIME,
+                last_met DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # 사용자 피드백 테이블 (4순위: Analytics API)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_feedback (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                feedback_id TEXT UNIQUE NOT NULL,
+                user_id TEXT NOT NULL,
+                command_id TEXT,
+                satisfaction INTEGER CHECK(satisfaction >= 1 AND satisfaction <= 5),
+                feedback TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                processed BOOLEAN DEFAULT 0
+            )
+        """)
+        
+        # 명령 실행 로그 테이블
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS command_execution_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                command_id TEXT,
+                command_type TEXT,
+                parameters TEXT,  -- JSON 형태로 저장
+                user_id TEXT,
+                robot_id TEXT DEFAULT 'deks_001',
+                success BOOLEAN,
+                execution_time REAL,
+                error_message TEXT
+            )
+        """)
+        
+        # 인덱스 생성
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_interactions_timestamp ON user_interactions(timestamp)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_interactions_user_id ON user_interactions(user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_robot_states_timestamp ON robot_states(timestamp)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_sensor_data_timestamp ON sensor_data(timestamp)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_command_execution_logs_timestamp ON command_execution_logs(timestamp)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_command_execution_logs_user_id ON command_execution_logs(user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_messages_user_id ON chat_messages(user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_long_term_memory_user_id ON user_long_term_memory(user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_feedback_user_id ON user_feedback(user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_feedback_timestamp ON user_feedback(timestamp)")
+        
+        conn.commit()
+        logger.info("데이터베이스 테이블 생성 완료")
+        
+    except Exception as e:
+        logger.error(f"데이터베이스 테이블 생성 중 오류 발생: {e}")
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+async def init_database():
+    """데이터베이스 초기화를 수행합니다."""
+    try:
+        create_tables()
+        logger.info("데이터베이스 초기화 완료")
+    except Exception as e:
+        logger.error(f"데이터베이스 초기화 실패: {e}")
+        raise
+
+
+def get_connection():
+    """데이터베이스 연결을 반환합니다."""
+    db_path = get_database_path()
+    return sqlite3.connect(db_path)
+
+
+def get_cursor():
+    """데이터베이스 커서를 반환합니다."""
+    conn = get_connection()
+    return conn.cursor()

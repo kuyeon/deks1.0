@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deks 1.0 - 로봇 제어 대시보드</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- 헤더 -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-robot"></i>
+                    <h1>Deks 1.0</h1>
+                </div>
+                <div class="connection-status">
+                    <div class="status-indicator" id="connectionStatus">
+                        <i class="fas fa-circle"></i>
+                        <span>연결 중...</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 메인 콘텐츠 -->
+        <main class="main-content">
+            <!-- 로봇 상태 카드 -->
+            <div class="dashboard-grid">
+                <div class="status-card robot-status">
+                    <div class="card-header">
+                        <h3><i class="fas fa-robot"></i> 로봇 상태</h3>
+                        <button class="refresh-btn" id="refreshStatus">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <div class="status-content">
+                        <div class="status-item">
+                            <span class="label">위치:</span>
+                            <span class="value" id="robotPosition">X: 0, Y: 0</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="label">방향:</span>
+                            <span class="value" id="robotOrientation">0°</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="label">배터리:</span>
+                            <div class="battery-container">
+                                <div class="battery-bar">
+                                    <div class="battery-level" id="batteryLevel"></div>
+                                </div>
+                                <span class="battery-text" id="batteryText">85%</span>
+                            </div>
+                        </div>
+                        <div class="status-item">
+                            <span class="label">상태:</span>
+                            <span class="status-badge" id="robotState">대기 중</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 센서 데이터 카드 -->
+                <div class="status-card sensor-data">
+                    <div class="card-header">
+                        <h3><i class="fas fa-radar"></i> 센서 데이터</h3>
+                        <div class="sensor-toggle">
+                            <label class="switch">
+                                <input type="checkbox" id="sensorAutoRefresh" checked>
+                                <span class="slider"></span>
+                            </label>
+                            <span>자동 새로고침</span>
+                        </div>
+                    </div>
+                    <div class="sensor-content">
+                        <div class="sensor-item">
+                            <div class="sensor-icon">
+                                <i class="fas fa-arrow-up"></i>
+                            </div>
+                            <div class="sensor-info">
+                                <span class="sensor-label">전방 장애물 거리</span>
+                                <span class="sensor-value" id="frontDistance">25.5 cm</span>
+                            </div>
+                        </div>
+                        <div class="sensor-item">
+                            <div class="sensor-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="sensor-info">
+                                <span class="sensor-label">낙하 감지</span>
+                                <span class="sensor-value safe" id="dropDetection">안전</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 로봇 제어 카드 -->
+                <div class="status-card robot-control">
+                    <div class="card-header">
+                        <h3><i class="fas fa-gamepad"></i> 로봇 제어</h3>
+                    </div>
+                    <div class="control-content">
+                        <div class="control-grid">
+                            <button class="control-btn move-btn" id="turnLeft" data-action="turn_left">
+                                <i class="fas fa-arrow-left"></i>
+                                <span>좌회전</span>
+                            </button>
+                            <button class="control-btn move-btn" id="turnRight" data-action="turn_right">
+                                <i class="fas fa-arrow-right"></i>
+                                <span>우회전</span>
+                            </button>
+                            <button class="control-btn stop-btn" id="stopRobot" data-action="stop">
+                                <i class="fas fa-stop"></i>
+                                <span>정지</span>
+                            </button>
+                            <button class="control-btn move-btn" id="moveForward" data-action="move_forward">
+                                <i class="fas fa-arrow-up"></i>
+                                <span>전진</span>
+                            </button>
+                            <button class="control-btn special-btn" id="spinRobot" data-action="spin">
+                                <i class="fas fa-sync-alt"></i>
+                                <span>빙글빙글</span>
+                            </button>
+                        </div>
+                        <div class="control-params">
+                            <div class="param-group">
+                                <label for="speedInput">속도 (%)</label>
+                                <input type="number" id="speedInput" min="0" max="100" value="50" class="param-input" placeholder="0-100">
+                            </div>
+                            <div class="param-group">
+                                <label for="distanceInput">거리 (cm)</label>
+                                <input type="number" id="distanceInput" min="0" max="200" value="100" class="param-input" placeholder="0-200">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 통합 채팅 및 명령 인터페이스 카드 -->
+                <div class="status-card integrated-chat-interface">
+                    <div class="card-header">
+                        <h3><i class="fas fa-robot"></i> 덱스와 대화하기</h3>
+                        <div class="chat-controls">
+                            <button class="clear-chat-btn" id="clearChat" title="대화 기록 지우기">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="integrated-content" id="integratedContent">
+                        <div class="chat-messages" id="chatMessages">
+                            <div class="message bot-message">
+                                <div class="message-avatar">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <div class="message-content">
+                                    <div class="message-text">안녕하세요! 저는 덱스 로봇이에요. 대화하거나 명령을 내려주세요!</div>
+                                    <div class="message-time">방금 전</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="input-container">
+                            <div class="input-wrapper">
+                                <input type="text" id="chatInput" placeholder="덱스에게 메시지를 보내거나 명령을 내려주세요...">
+                                <button class="send-btn" id="chatSendBtn">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                            <div class="suggestions-container">
+                                <div class="suggestion-section">
+                                    <div class="suggestion-title">💬 대화 제안:</div>
+                                    <div class="suggestion-tags">
+                                        <span class="suggestion-tag" data-message="안녕 덱스!">안녕 덱스!</span>
+                                        <span class="suggestion-tag" data-message="너는 뭐하는 로봇이야?">너는 뭐하는 로봇이야?</span>
+                                        <span class="suggestion-tag" data-message="고마워!">고마워!</span>
+                                    </div>
+                                </div>
+                                <div class="suggestion-section">
+                                    <div class="suggestion-title">🎮 명령 제안:</div>
+                                    <div class="suggestion-tags">
+                                        <span class="suggestion-tag" data-message="앞으로 가줘">앞으로 가줘</span>
+                                        <span class="suggestion-tag" data-message="오른쪽으로 돌아줘">오른쪽으로 돌아줘</span>
+                                        <span class="suggestion-tag" data-message="정지해줘">정지해줘</span>
+                                        <span class="suggestion-tag" data-message="빙글빙글 돌아줘">빙글빙글 돌아줘</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 알림 토스트 -->
+        <div class="toast-container" id="toastContainer"></div>
+
+        <!-- 로딩 오버레이 -->
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-spinner">
+                <i class="fas fa-robot fa-spin"></i>
+                <p>명령 실행 중...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 스크립트 -->
+    <script src="js/api.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/websocket.js"></script>
+    <script src="js/chat.js"></script>
+</body>
+</html>
