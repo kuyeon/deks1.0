@@ -5,8 +5,8 @@ Deks 1.0 ESP32 펌웨어 설정 파일
 
 # 네트워크 설정
 WIFI_CONFIG = {
-    "ssid": "kuyeon_room",           # 실제 Wi-Fi SSID
-    "password": "pky44684468",       # 실제 Wi-Fi 비밀번호
+    "ssid": "outrobot",              # 실제 Wi-Fi SSID
+    "password": "outrobot100!",      # 실제 Wi-Fi 비밀번호
     "timeout": 5                     # 연결 타임아웃 (초)
 }
 
@@ -22,14 +22,16 @@ SERVER_CONFIG = {
 # GPIO 핀 설정
 GPIO_CONFIG = {
     # 모터 제어 (L298N)
-    "motor_left_pwm": 2,
-    "motor_left_dir": 3,
-    "motor_right_pwm": 4,
-    "motor_right_dir": 5,
+    "motor_left_in1": 4,
+    "motor_left_in2": 5,
+    "motor_left_enable": 6,
+    "motor_right_in1": 2,
+    "motor_right_in2": 3,
+    "motor_right_enable": 7,
     
     # 엔코더
-    "encoder_left_a": 6,
-    "encoder_left_b": 7,
+    "encoder_left_a": 18,
+    "encoder_left_b": 17,
     "encoder_right_a": 8,
     "encoder_right_b": 9,
     

@@ -14,25 +14,39 @@ except ImportError:
 class MotorController:
     """모터 제어 클래스"""
     
-    def __init__(self, left_pwm_pin, left_dir_pin, 
-                 right_pwm_pin, right_dir_pin,
+    def __init__(self, left_in1_pin, left_in2_pin, left_enable_pin,
+                 right_in1_pin, right_in2_pin, right_enable_pin,
                  left_encoder_a, left_encoder_b,
                  right_encoder_a, right_encoder_b):
         """모터 컨트롤러 초기화"""
-        self.left_pwm = PWM(Pin(left_pwm_pin))
-        self.left_dir = Pin(left_dir_pin, Pin.OUT)
-        self.right_pwm = PWM(Pin(right_pwm_pin))
-        self.right_dir = Pin(right_dir_pin, Pin.OUT)
+        print(f"모터 컨트롤러 초기화:")
+        print(f"  왼쪽 모터: IN1={left_in1_pin}, IN2={left_in2_pin}, Enable={left_enable_pin}")
+        print(f"  오른쪽 모터: IN1={right_in1_pin}, IN2={right_in2_pin}, Enable={right_enable_pin}")
+        print(f"  왼쪽 엔코더: A={left_encoder_a}, B={left_encoder_b}")
+        print(f"  오른쪽 엔코더: A={right_encoder_a}, B={right_encoder_b}")
+        
+        # 왼쪽 모터 L298N 핀
+        self.left_in1 = Pin(left_in1_pin, Pin.OUT)
+        self.left_in2 = Pin(left_in2_pin, Pin.OUT)
+        self.left_enable = PWM(Pin(left_enable_pin))
+        
+        # 오른쪽 모터 L298N 핀
+        self.right_in1 = Pin(right_in1_pin, Pin.OUT)
+        self.right_in2 = Pin(right_in2_pin, Pin.OUT)
+        self.right_enable = PWM(Pin(right_enable_pin))
         
         # PWM 설정
-        self.left_pwm.freq(1000)
-        self.right_pwm.freq(1000)
+        self.left_enable.freq(1000)
+        self.right_enable.freq(1000)
         
         # 모터 정지 상태로 초기화
-        self.left_pwm.duty(0)
-        self.right_pwm.duty(0)
-        self.left_dir.off()
-        self.right_dir.off()
+        self.left_enable.duty(0)
+        self.right_enable.duty(0)
+        self.left_in1.off()
+        self.left_in2.off()
+        self.right_in1.off()
+        self.right_in2.off()
+        print("모터 핀 초기화 완료 (모두 OFF)")
         
         # 엔코더 설정
         self.left_encoder_a = Pin(left_encoder_a, Pin.IN, Pin.PULL_UP)
@@ -44,8 +58,8 @@ class MotorController:
         self.left_count = 0
         self.right_count = 0
         
-        # 엔코더 인터럽트 설정
-        self.left_encoder_a.irq(trigger=Pin.IRQ_RISING, handler=self._left_encoder_callback)
+        # 엔코더 인터럽트 설정 (B 채널을 인터럽트 핀으로 사용)
+        self.left_encoder_b.irq(trigger=Pin.IRQ_RISING | Pin.IRQ_FALLING, handler=self._left_encoder_callback)
         self.right_encoder_a.irq(trigger=Pin.IRQ_RISING, handler=self._right_encoder_callback)
         
         # 모터 상태
@@ -61,8 +75,9 @@ class MotorController:
         print("모터 컨트롤러 초기화 완료")
     
     def _left_encoder_callback(self, pin):
-        """왼쪽 엔코더 인터럽트 콜백"""
-        if self.left_encoder_b.value():
+        """왼쪽 엔코더 인터럽트 콜백 (B 채널 인터럽트)"""
+        # B 채널이 변할 때, A 채널 상태를 확인하여 방향 결정
+        if self.left_encoder_a.value():
             self.left_count += 1
         else:
             self.left_count -= 1
@@ -76,6 +91,8 @@ class MotorController:
     
     def move(self, left_speed: int, right_speed: int):
         """모터 이동 제어"""
+        print(f"MotorController.move 호출: left={left_speed}, right={right_speed}")
+        
         # 속도 제한
         left_speed = max(-self.max_speed, min(self.max_speed, left_speed))
         right_speed = max(-self.max_speed, min(self.max_speed, right_speed))
@@ -86,25 +103,51 @@ class MotorController:
         if abs(right_speed) < self.min_speed and right_speed != 0:
             right_speed = self.min_speed if right_speed > 0 else -self.min_speed
         
-        # 왼쪽 모터 제어
-        if left_speed > 0:
-            self.left_dir.off()  # 전진
-            self.left_pwm.duty(int(left_speed * 10.23))
-        elif left_speed < 0:
-            self.left_dir.on()   # 후진
-            self.left_pwm.duty(int(-left_speed * 10.23))
-        else:
-            self.left_pwm.duty(0)
+        print(f"조정된 속도: left={left_speed}, right={right_speed}")
         
-        # 오른쪽 모터 제어
-        if right_speed > 0:
-            self.right_dir.off()  # 전진
-            self.right_pwm.duty(int(right_speed * 10.23))
-        elif right_speed < 0:
-            self.right_dir.on()   # 후진
-            self.right_pwm.duty(int(-right_speed * 10.23))
+        # 왼쪽 모터 제어 (L298N IN1, IN2 방식)
+        if left_speed > 0:
+            # 전진: IN1=1, IN2=0
+            duty_value = int(left_speed * 10.23)
+            print(f"왼쪽 모터 전진: IN1=ON, IN2=OFF, PWM duty={duty_value}")
+            self.left_in1.on()
+            self.left_in2.off()
+            self.left_enable.duty(duty_value)
+        elif left_speed < 0:
+            # 후진: IN1=0, IN2=1
+            duty_value = int(-left_speed * 10.23)
+            print(f"왼쪽 모터 후진: IN1=OFF, IN2=ON, PWM duty={duty_value}")
+            self.left_in1.off()
+            self.left_in2.on()
+            self.left_enable.duty(duty_value)
         else:
-            self.right_pwm.duty(0)
+            # 정지: IN1=0, IN2=0
+            print(f"왼쪽 모터 정지")
+            self.left_in1.off()
+            self.left_in2.off()
+            self.left_enable.duty(0)
+        
+        # 오른쪽 모터 제어 (L298N IN1, IN2 방식)
+        if right_speed > 0:
+            # 전진: IN1=1, IN2=0
+            duty_value = int(right_speed * 10.23)
+            print(f"오른쪽 모터 전진: IN1=ON, IN2=OFF, PWM duty={duty_value}")
+            self.right_in1.on()
+            self.right_in2.off()
+            self.right_enable.duty(duty_value)
+        elif right_speed < 0:
+            # 후진: IN1=0, IN2=1
+            duty_value = int(-right_speed * 10.23)
+            print(f"오른쪽 모터 후진: IN1=OFF, IN2=ON, PWM duty={duty_value}")
+            self.right_in1.off()
+            self.right_in2.on()
+            self.right_enable.duty(duty_value)
+        else:
+            # 정지: IN1=0, IN2=0
+            print(f"오른쪽 모터 정지")
+            self.right_in1.off()
+            self.right_in2.off()
+            self.right_enable.duty(0)
         
         self.left_speed = left_speed
         self.right_speed = right_speed
@@ -113,10 +156,12 @@ class MotorController:
     def stop(self):
         """모터 정지"""
         print("MotorController.stop 호출")
-        self.left_pwm.duty(0)
-        self.right_pwm.duty(0)
-        self.left_dir.off()
-        self.right_dir.off()
+        self.left_enable.duty(0)
+        self.right_enable.duty(0)
+        self.left_in1.off()
+        self.left_in2.off()
+        self.right_in1.off()
+        self.right_in2.off()
         self.left_speed = 0
         self.right_speed = 0
         self.is_moving = False
@@ -648,8 +693,8 @@ class HardwareInterface:
         
         # 하드웨어 컴포넌트 초기화
         self.motor_controller = MotorController(
-            config["motor_left_pwm"], config["motor_left_dir"],
-            config["motor_right_pwm"], config["motor_right_dir"],
+            config["motor_left_in1"], config["motor_left_in2"], config["motor_left_enable"],
+            config["motor_right_in1"], config["motor_right_in2"], config["motor_right_enable"],
             config["encoder_left_a"], config["encoder_left_b"],
             config["encoder_right_a"], config["encoder_right_b"]
         )
