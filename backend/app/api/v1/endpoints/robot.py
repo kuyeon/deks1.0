@@ -47,6 +47,7 @@ class StopRequest(BaseModel):
 class SpinRequest(BaseModel):
     """빙글빙글 명령 요청 모델"""
     rotations: int = Field(default=1, ge=1, le=10, description="회전 횟수 (1-10)")
+    speed: int = Field(default=50, ge=0, le=100, description="속도 (0-100)")
     user_id: str = Field(default="default_user", description="사용자 ID")
 
 
@@ -124,7 +125,7 @@ async def move_forward(request: MoveForwardRequest):
 @router.post("/move/turn", response_model=CommandResponse)
 async def turn(request: TurnRequest):
     """로봇을 회전시킵니다."""
-    logger.info(f"회전 명령 수신: 방향={request.direction}, 각도={request.angle}")
+    logger.info(f"회전 명령 수신: 방향={request.direction}, 각도={request.angle}, 속도={request.speed}")
     
     # Socket Bridge를 통해 ESP32에 명령 전송
     socket_bridge = await get_socket_bridge()
@@ -134,9 +135,9 @@ async def turn(request: TurnRequest):
     
     # 방향에 따른 회전 명령 실행
     if request.direction == "left":
-        await robot_controller.turn_left(request.angle)
+        await robot_controller.turn_left(request.angle, request.speed)
     else:
-        await robot_controller.turn_right(request.angle)
+        await robot_controller.turn_right(request.angle, request.speed)
     
     return CommandResponse(
         success=True,
@@ -194,7 +195,7 @@ async def stop(_request: StopRequest):
 @router.post("/spin", response_model=CommandResponse)
 async def spin(request: SpinRequest):
     """로봇을 빙글빙글 회전시킵니다."""
-    logger.info(f"빙글빙글 명령 수신: 회전수={request.rotations}")
+    logger.info(f"빙글빙글 명령 수신: 회전수={request.rotations}, 속도={request.speed}")
     
     # Socket Bridge를 통해 ESP32에 명령 전송
     socket_bridge = await get_socket_bridge()
@@ -203,7 +204,7 @@ async def spin(request: SpinRequest):
     command_id = f"cmd_{int(datetime.now().timestamp())}"
     
     # 빙글빙글 명령 실행
-    await robot_controller.spin(request.rotations)
+    await robot_controller.spin(request.rotations, request.speed)
     
     return CommandResponse(
         success=True,

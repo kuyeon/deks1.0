@@ -254,19 +254,20 @@ class RobotController:
                 original_exception=e
             )
     
-    async def turn_left(self, angle: int = 90) -> bool:
+    async def turn_left(self, angle: int = 90, speed: int = 50) -> bool:
         """좌회전 명령"""
         try:
             command = {
                 "type": MovementType.TURN_LEFT.value,
                 "angle": angle,
+                "speed": speed,
                 "timestamp": datetime.now().isoformat()
             }
             
             await self.command_queue.put(command)
             self.current_state = RobotState.TURNING
             
-            logger.info(f"좌회전 명령 추가됨 - 각도: {angle}")
+            logger.info(f"좌회전 명령 추가됨 - 각도: {angle}, 속도: {speed}")
             return True
             
         except Exception as e:
@@ -277,19 +278,20 @@ class RobotController:
                 original_exception=e
             )
     
-    async def turn_right(self, angle: int = 90) -> bool:
+    async def turn_right(self, angle: int = 90, speed: int = 50) -> bool:
         """우회전 명령"""
         try:
             command = {
                 "type": MovementType.TURN_RIGHT.value,
                 "angle": angle,
+                "speed": speed,
                 "timestamp": datetime.now().isoformat()
             }
             
             await self.command_queue.put(command)
             self.current_state = RobotState.TURNING
             
-            logger.info(f"우회전 명령 추가됨 - 각도: {angle}")
+            logger.info(f"우회전 명령 추가됨 - 각도: {angle}, 속도: {speed}")
             return True
             
         except Exception as e:
@@ -300,19 +302,20 @@ class RobotController:
                 original_exception=e
             )
     
-    async def spin(self, rotations: int = 1) -> bool:
+    async def spin(self, rotations: int = 1, speed: int = 50) -> bool:
         """빙글빙글 명령"""
         try:
             command = {
                 "type": MovementType.SPIN.value,
                 "rotations": rotations,
+                "speed": speed,
                 "timestamp": datetime.now().isoformat()
             }
             
             await self.command_queue.put(command)
             self.current_state = RobotState.TURNING
             
-            logger.info(f"빙글빙글 명령 추가됨 - 회전수: {rotations}")
+            logger.info(f"빙글빙글 명령 추가됨 - 회전수: {rotations}, 속도: {speed}")
             return True
             
         except Exception as e:

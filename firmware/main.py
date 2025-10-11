@@ -307,15 +307,17 @@ class DeksRobot:
             elif inner_type == "turn_left":
                 # 좌회전 명령
                 angle = inner_command.get("angle", 90)
-                print(f"좌회전: {angle}도")
-                self.move_motors(-50, 50)
+                speed = inner_command.get("speed", 50)
+                print(f"좌회전: {angle}도, 속도 {speed}")
+                self.move_motors(-speed, speed)
                 success = True
                 
             elif inner_type == "turn_right":
                 # 우회전 명령
                 angle = inner_command.get("angle", 90)
-                print(f"우회전: {angle}도")
-                self.move_motors(50, -50)
+                speed = inner_command.get("speed", 50)
+                print(f"우회전: {angle}도, 속도 {speed}")
+                self.move_motors(speed, -speed)
                 success = True
                 
             elif inner_type == "stop":
@@ -327,8 +329,9 @@ class DeksRobot:
             elif inner_type == "spin":
                 # 빙글빙글 회전 명령
                 rotations = inner_command.get("rotations", 1)
-                print(f"빙글빙글 회전: {rotations}회")
-                self.move_motors(50, -50)  # 제자리 회전
+                speed = inner_command.get("speed", 50)
+                print(f"빙글빙글 회전: {rotations}회, 속도 {speed}")
+                self.move_motors(speed, -speed)  # 제자리 회전
                 success = True
                 
             else:
