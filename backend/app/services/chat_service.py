@@ -417,39 +417,111 @@ class ChatService:
                 if extracted_name:
                     extracted_info["user_name"] = extracted_name
             
-            # 로봇 명령 실행 (intent가 robot_ 로 시작하는 경우)
-            if intent.startswith("robot_"):
-                try:
-                    from app.services.socket_bridge import get_socket_bridge
-                    
-                    # Socket Bridge를 통해 로봇 명령 실행
+            # 로봇 명령 실행 - 자연어 명령 파싱 통합
+            robot_command_executed = False
+            try:
+                from app.services.socket_bridge import get_socket_bridge
+                from app.api.v1.endpoints.nlp import parse_natural_language_command
+                
+                # 자연어 명령 파싱 시도
+                parsed_command = parse_natural_language_command(message)
+                
+                if parsed_command["action"]:
+                    # 자연어 명령이 인식된 경우
                     socket_bridge = await get_socket_bridge()
                     robot_controller = socket_bridge.robot_controller
                     
-                    # intent에 따라 명령 실행
+                    action = parsed_command["action"]
+                    parameters = parsed_command["parameters"] or {}
+                    modifiers = parsed_command.get("modifiers", {})
+                    
+                    logger.info(f"자연어 명령 파싱: {action}, 속도={modifiers.get('speed_value', 50)}, 거리={modifiers.get('distance_value', 100)}")
+                    
+                    # 파싱된 명령 실행
+                    if action == "move_forward":
+                        await robot_controller.move_forward(
+                            speed=parameters.get("speed", 50),
+                            distance=parameters.get("distance", 100)
+                        )
+                        robot_command_executed = True
+                        logger.info(f"로봇 전진 명령 실행 (속도: {parameters.get('speed')})")
+                    
+                    elif action == "move_backward":
+                        await robot_controller.move_backward(
+                            speed=parameters.get("speed", 50),
+                            distance=parameters.get("distance", 100)
+                        )
+                        robot_command_executed = True
+                        logger.info(f"로봇 후진 명령 실행 (속도: {parameters.get('speed')})")
+                    
+                    elif action == "turn_left":
+                        await robot_controller.turn_left(
+                            angle=parameters.get("angle", 90),
+                            speed=parameters.get("speed", 50)
+                        )
+                        robot_command_executed = True
+                        logger.info(f"로봇 좌회전 명령 실행 (속도: {parameters.get('speed', 50)})")
+                    
+                    elif action == "turn_right":
+                        await robot_controller.turn_right(
+                            angle=parameters.get("angle", 90),
+                            speed=parameters.get("speed", 50)
+                        )
+                        robot_command_executed = True
+                        logger.info(f"로봇 우회전 명령 실행 (속도: {parameters.get('speed', 50)})")
+                    
+                    elif action == "stop":
+                        await robot_controller.stop()
+                        robot_command_executed = True
+                        logger.info(f"로봇 정지 명령 실행")
+                    
+                    elif action == "spin":
+                        await robot_controller.spin(
+                            rotations=parameters.get("rotations", 1),
+                            speed=parameters.get("speed", 50)
+                        )
+                        robot_command_executed = True
+                        logger.info(f"로봇 빙글빙글 명령 실행 (속도: {parameters.get('speed', 50)})")
+                    
+                    # 자연어 파싱 응답으로 대체
+                    if robot_command_executed and parsed_command.get("response"):
+                        response["text"] = parsed_command["response"]
+                
+                # 기존 패턴 기반 명령 처리 (자연어 파싱 실패 시 백업)
+                elif intent.startswith("robot_"):
+                    socket_bridge = await get_socket_bridge()
+                    robot_controller = socket_bridge.robot_controller
+                    
                     if intent == "robot_move_forward":
                         await robot_controller.move_forward(speed=50, distance=100)
-                        logger.info(f"로봇 전진 명령 실행")
+                        robot_command_executed = True
+                        logger.info(f"로봇 전진 명령 실행 (기존 패턴)")
+                    
                     elif intent == "robot_turn":
                         # 메시지에서 방향 판단
                         if any(keyword in message for keyword in ["왼쪽", "좌회전"]):
-                            await robot_controller.turn_left(angle=90)
-                            logger.info(f"로봇 좌회전 명령 실행")
+                            await robot_controller.turn_left(angle=90, speed=50)
+                            logger.info(f"로봇 좌회전 명령 실행 (기존 패턴)")
                         elif any(keyword in message for keyword in ["오른쪽", "우회전"]):
-                            await robot_controller.turn_right(angle=90)
-                            logger.info(f"로봇 우회전 명령 실행")
+                            await robot_controller.turn_right(angle=90, speed=50)
+                            logger.info(f"로봇 우회전 명령 실행 (기존 패턴)")
                         else:
-                            await robot_controller.turn_right(angle=90)
+                            await robot_controller.turn_right(angle=90, speed=50)
                             logger.info(f"로봇 회전 명령 실행 (기본: 우회전)")
+                        robot_command_executed = True
+                    
                     elif intent == "robot_stop":
                         await robot_controller.stop()
-                        logger.info(f"로봇 정지 명령 실행")
-                    elif intent == "robot_spin":
-                        await robot_controller.spin(rotations=1)
-                        logger.info(f"로봇 빙글빙글 명령 실행")
+                        robot_command_executed = True
+                        logger.info(f"로봇 정지 명령 실행 (기존 패턴)")
                     
-                except Exception as e:
-                    logger.error(f"로봇 명령 실행 중 오류: {e}")
+                    elif intent == "robot_spin":
+                        await robot_controller.spin(rotations=1, speed=50)
+                        robot_command_executed = True
+                        logger.info(f"로봇 빙글빙글 명령 실행 (기존 패턴)")
+                    
+            except Exception as e:
+                logger.error(f"로봇 명령 실행 중 오류: {e}")
             
             # 대화 기록 저장
             await self._save_conversation(
