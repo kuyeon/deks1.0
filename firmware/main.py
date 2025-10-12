@@ -199,8 +199,12 @@ class DeksRobot:
         self.hardware.update_sensors()
     
     def move_motors(self, left_speed, right_speed):
-        """모터 제어"""
+        """모터 제어 (속도 기반)"""
         return self.hardware.move_robot(left_speed, right_speed)
+    
+    def move_motors_pwm(self, left_pwm, right_pwm):
+        """모터 제어 (PWM 듀티 직접 지정)"""
+        return self.hardware.move_robot_pwm(left_pwm, right_pwm)
     
     def stop_motors(self):
         """모터 정지"""
@@ -291,33 +295,37 @@ class DeksRobot:
             if inner_type == "forward":
                 # 전진 명령
                 speed = inner_command.get("speed", 50)
+                pwm_duty = inner_command.get("pwm_duty", speed)  # PWM 듀티 우선 사용
                 distance = inner_command.get("distance", 0)
-                print(f"전진: 속도 {speed}, 거리 {distance}")
-                self.move_motors(speed, speed)
+                print(f"전진: 속도 {speed}, PWM duty {pwm_duty}, 거리 {distance}")
+                self.move_motors_pwm(pwm_duty, pwm_duty)
                 success = True
                 
             elif inner_type == "backward":
                 # 후진 명령
                 speed = inner_command.get("speed", 50)
+                pwm_duty = inner_command.get("pwm_duty", speed)  # PWM 듀티 우선 사용
                 distance = inner_command.get("distance", 0)
-                print(f"후진: 속도 {speed}, 거리 {distance}")
-                self.move_motors(-speed, -speed)
+                print(f"후진: 속도 {speed}, PWM duty {pwm_duty}, 거리 {distance}")
+                self.move_motors_pwm(-pwm_duty, -pwm_duty)
                 success = True
                 
             elif inner_type == "turn_left":
                 # 좌회전 명령
                 angle = inner_command.get("angle", 90)
                 speed = inner_command.get("speed", 50)
-                print(f"좌회전: {angle}도, 속도 {speed}")
-                self.move_motors(-speed, speed)
+                pwm_duty = inner_command.get("pwm_duty", speed)  # PWM 듀티 우선 사용
+                print(f"좌회전: {angle}도, 속도 {speed}, PWM duty {pwm_duty}")
+                self.move_motors_pwm(-pwm_duty, pwm_duty)
                 success = True
                 
             elif inner_type == "turn_right":
                 # 우회전 명령
                 angle = inner_command.get("angle", 90)
                 speed = inner_command.get("speed", 50)
-                print(f"우회전: {angle}도, 속도 {speed}")
-                self.move_motors(speed, -speed)
+                pwm_duty = inner_command.get("pwm_duty", speed)  # PWM 듀티 우선 사용
+                print(f"우회전: {angle}도, 속도 {speed}, PWM duty {pwm_duty}")
+                self.move_motors_pwm(pwm_duty, -pwm_duty)
                 success = True
                 
             elif inner_type == "stop":
@@ -330,8 +338,9 @@ class DeksRobot:
                 # 빙글빙글 회전 명령
                 rotations = inner_command.get("rotations", 1)
                 speed = inner_command.get("speed", 50)
-                print(f"빙글빙글 회전: {rotations}회, 속도 {speed}")
-                self.move_motors(speed, -speed)  # 제자리 회전
+                pwm_duty = inner_command.get("pwm_duty", speed)  # PWM 듀티 우선 사용
+                print(f"빙글빙글 회전: {rotations}회, 속도 {speed}, PWM duty {pwm_duty}")
+                self.move_motors_pwm(pwm_duty, -pwm_duty)  # 제자리 회전
                 success = True
                 
             else:

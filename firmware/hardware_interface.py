@@ -69,10 +69,17 @@ class MotorController:
         
         # 안전 설정
         self.max_speed = 100
-        self.min_speed = 10
+        self.min_speed = 0  # 속도 0 허용 (정지 처리)
         self.acceleration = 5
         
+        # PWM 듀티 범위 설정 (460~1023)
+        # 460 미만에서는 모터가 제대로 작동하지 않음
+        self.min_pwm_duty = 460
+        self.max_pwm_duty = 1023
+        self.pwm_range = self.max_pwm_duty - self.min_pwm_duty  # 563
+        
         print("모터 컨트롤러 초기화 완료")
+        print(f"PWM 듀티 범위: {self.min_pwm_duty} ~ {self.max_pwm_duty}")
     
     def _left_encoder_callback(self, pin):
         """왼쪽 엔코더 인터럽트 콜백 (B 채널 인터럽트)"""
@@ -88,6 +95,23 @@ class MotorController:
             self.right_count += 1
         else:
             self.right_count -= 1
+    
+    def _speed_to_pwm_duty(self, speed: int) -> int:
+        """
+        속도 값(0~100)을 PWM 듀티 사이클(460~1023)로 재매핑
+        
+        Args:
+            speed: 속도 값 (0~100)
+            
+        Returns:
+            PWM 듀티 사이클 (460~1023)
+        """
+        # 속도 0~100을 PWM 460~1023으로 선형 매핑
+        # speed = 0일 때 460, speed = 100일 때 1023
+        # duty = 460 + (speed / 100) * (1023 - 460)
+        # duty = 460 + speed * 5.63
+        duty = int(self.min_pwm_duty + (abs(speed) / 100.0) * self.pwm_range)
+        return max(self.min_pwm_duty, min(self.max_pwm_duty, duty))
     
     def move(self, left_speed: int, right_speed: int):
         """모터 이동 제어"""
@@ -105,53 +129,101 @@ class MotorController:
         
         print(f"조정된 속도: left={left_speed}, right={right_speed}")
         
-        # 왼쪽 모터 제어 (L298N IN1, IN2 방식)
-        if left_speed > 0:
-            # 전진: IN1=1, IN2=0
-            duty_value = int(left_speed * 10.23)
-            print(f"왼쪽 모터 전진: IN1=ON, IN2=OFF, PWM duty={duty_value}")
-            self.left_in1.on()
-            self.left_in2.off()
-            self.left_enable.duty(duty_value)
-        elif left_speed < 0:
-            # 후진: IN1=0, IN2=1
-            duty_value = int(-left_speed * 10.23)
-            print(f"왼쪽 모터 후진: IN1=OFF, IN2=ON, PWM duty={duty_value}")
-            self.left_in1.off()
-            self.left_in2.on()
-            self.left_enable.duty(duty_value)
-        else:
-            # 정지: IN1=0, IN2=0
-            print(f"왼쪽 모터 정지")
+        # 완전 정지 체크 (좌우 모두 0)
+        if left_speed == 0 and right_speed == 0:
+            print(f"완전 정지: 좌우 모두 0")
             self.left_in1.off()
             self.left_in2.off()
             self.left_enable.duty(0)
-        
-        # 오른쪽 모터 제어 (L298N IN1, IN2 방식)
-        if right_speed > 0:
-            # 전진: IN1=1, IN2=0
-            duty_value = int(right_speed * 10.23)
-            print(f"오른쪽 모터 전진: IN1=ON, IN2=OFF, PWM duty={duty_value}")
-            self.right_in1.on()
-            self.right_in2.off()
-            self.right_enable.duty(duty_value)
-        elif right_speed < 0:
-            # 후진: IN1=0, IN2=1
-            duty_value = int(-right_speed * 10.23)
-            print(f"오른쪽 모터 후진: IN1=OFF, IN2=ON, PWM duty={duty_value}")
-            self.right_in1.off()
-            self.right_in2.on()
-            self.right_enable.duty(duty_value)
-        else:
-            # 정지: IN1=0, IN2=0
-            print(f"오른쪽 모터 정지")
             self.right_in1.off()
             self.right_in2.off()
             self.right_enable.duty(0)
+        else:
+            # 왼쪽 모터 제어 (L298N IN1, IN2 방식) - 방향 반전됨
+            if left_speed >= 0:
+                # 전진: IN1=0, IN2=1 (반전) - 속도 0도 PWM 460으로 작동
+                duty_value = self._speed_to_pwm_duty(left_speed)
+                print(f"왼쪽 모터 전진: IN1=OFF, IN2=ON, PWM duty={duty_value}")
+                self.left_in1.off()
+                self.left_in2.on()
+                self.left_enable.duty(duty_value)
+            else:  # left_speed < 0
+                # 후진: IN1=1, IN2=0 (반전)
+                duty_value = self._speed_to_pwm_duty(-left_speed)
+                print(f"왼쪽 모터 후진: IN1=ON, IN2=OFF, PWM duty={duty_value}")
+                self.left_in1.on()
+                self.left_in2.off()
+                self.left_enable.duty(duty_value)
+            
+            # 오른쪽 모터 제어 (L298N IN1, IN2 방식)
+            if right_speed >= 0:
+                # 전진: IN1=1, IN2=0 - 속도 0도 PWM 460으로 작동
+                duty_value = self._speed_to_pwm_duty(right_speed)
+                print(f"오른쪽 모터 전진: IN1=ON, IN2=OFF, PWM duty={duty_value}")
+                self.right_in1.on()
+                self.right_in2.off()
+                self.right_enable.duty(duty_value)
+            else:  # right_speed < 0
+                # 후진: IN1=0, IN2=1
+                duty_value = self._speed_to_pwm_duty(-right_speed)
+                print(f"오른쪽 모터 후진: IN1=OFF, IN2=ON, PWM duty={duty_value}")
+                self.right_in1.off()
+                self.right_in2.on()
+                self.right_enable.duty(duty_value)
         
         self.left_speed = left_speed
         self.right_speed = right_speed
-        self.is_moving = left_speed != 0 or right_speed != 0
+        self.is_moving = not (left_speed == 0 and right_speed == 0)
+    
+    def move_pwm(self, left_pwm: int, right_pwm: int):
+        """PWM 듀티로 직접 모터 제어 (서버에서 변환된 값 사용)"""
+        print(f"MotorController.move_pwm 호출: left={left_pwm}, right={right_pwm}")
+        
+        # 완전 정지 체크 (좌우 모두 0)
+        if left_pwm == 0 and right_pwm == 0:
+            print(f"완전 정지: 좌우 모두 0")
+            self.left_in1.off()
+            self.left_in2.off()
+            self.left_enable.duty(0)
+            self.right_in1.off()
+            self.right_in2.off()
+            self.right_enable.duty(0)
+            self.is_moving = False
+        else:
+            # 왼쪽 모터 제어 - PWM 듀티 직접 사용
+            if left_pwm >= 0:
+                # 전진 방향 (반전)
+                print(f"왼쪽 모터 전진: IN1=OFF, IN2=ON, PWM duty={left_pwm}")
+                self.left_in1.off()
+                self.left_in2.on()
+                self.left_enable.duty(left_pwm)
+            else:
+                # 후진 방향 (반전)
+                duty_value = abs(left_pwm)
+                print(f"왼쪽 모터 후진: IN1=ON, IN2=OFF, PWM duty={duty_value}")
+                self.left_in1.on()
+                self.left_in2.off()
+                self.left_enable.duty(duty_value)
+            
+            # 오른쪽 모터 제어 - PWM 듀티 직접 사용
+            if right_pwm >= 0:
+                # 전진 방향
+                print(f"오른쪽 모터 전진: IN1=ON, IN2=OFF, PWM duty={right_pwm}")
+                self.right_in1.on()
+                self.right_in2.off()
+                self.right_enable.duty(right_pwm)
+            else:
+                # 후진 방향
+                duty_value = abs(right_pwm)
+                print(f"오른쪽 모터 후진: IN1=OFF, IN2=ON, PWM duty={duty_value}")
+                self.right_in1.off()
+                self.right_in2.on()
+                self.right_enable.duty(duty_value)
+            
+            self.is_moving = True
+        
+        self.left_speed = left_pwm  # PWM 듀티를 속도로 저장
+        self.right_speed = right_pwm
     
     def stop(self):
         """모터 정지"""
@@ -757,7 +829,7 @@ class HardwareInterface:
         return True
     
     def move_robot(self, left_speed: int, right_speed: int):
-        """로봇 이동"""
+        """로봇 이동 (속도 기반)"""
         if self.emergency_stop:
             print("비상 정지 상태 - 이동 불가")
             return False
@@ -766,6 +838,18 @@ class HardwareInterface:
             return False
         
         self.motor_controller.move(left_speed, right_speed)
+        return True
+    
+    def move_robot_pwm(self, left_pwm: int, right_pwm: int):
+        """로봇 이동 (PWM 듀티 직접 지정)"""
+        if self.emergency_stop:
+            print("비상 정지 상태 - 이동 불가")
+            return False
+        
+        if not self.check_safety():
+            return False
+        
+        self.motor_controller.move_pwm(left_pwm, right_pwm)
         return True
     
     def stop_robot(self):

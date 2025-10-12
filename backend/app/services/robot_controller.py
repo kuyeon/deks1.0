@@ -50,7 +50,7 @@ class RobotController:
         
         # 안전 설정
         self.max_speed = 100
-        self.min_speed = 0
+        self.min_speed = 0  # 속도 0 허용 (자동으로 12로 변환)
         self.max_distance = 200
         self.min_distance = 0
         
@@ -58,7 +58,26 @@ class RobotController:
         self.command_queue = asyncio.Queue()
         self.is_processing_commands = False
         
+        # PWM 듀티 범위 설정 (속도 → PWM 변환용)
+        self.min_pwm_duty = 460
+        self.max_pwm_duty = 1023
+        self.pwm_range = self.max_pwm_duty - self.min_pwm_duty  # 563
+        
         logger.info("로봇 제어기 초기화됨")
+    
+    def _speed_to_pwm_duty(self, speed: int) -> int:
+        """
+        속도 값(0~100)을 PWM 듀티 사이클(460~1023)로 변환
+        
+        Args:
+            speed: 속도 값 (0~100)
+            
+        Returns:
+            PWM 듀티 사이클 (460~1023)
+        """
+        # 속도 0~100을 PWM 460~1023으로 선형 매핑
+        duty = int(self.min_pwm_duty + (abs(speed) / 100.0) * self.pwm_range)
+        return max(self.min_pwm_duty, min(self.max_pwm_duty, duty))
     
     async def initialize(self):
         """로봇 제어기 초기화 (비동기)"""
@@ -200,9 +219,13 @@ class RobotController:
             speed = self._validate_speed(speed)
             distance = self._validate_distance(distance)
             
+            # 속도를 PWM 듀티로 변환
+            pwm_duty = self._speed_to_pwm_duty(speed)
+            
             command = {
                 "type": MovementType.FORWARD.value,
                 "speed": speed,
+                "pwm_duty": pwm_duty,  # PWM 듀티 추가
                 "distance": distance,
                 "timestamp": datetime.now().isoformat()
             }
@@ -231,9 +254,13 @@ class RobotController:
             speed = self._validate_speed(speed)
             distance = self._validate_distance(distance)
             
+            # 속도를 PWM 듀티로 변환
+            pwm_duty = self._speed_to_pwm_duty(speed)
+            
             command = {
                 "type": MovementType.BACKWARD.value,
                 "speed": speed,
+                "pwm_duty": pwm_duty,  # PWM 듀티 추가
                 "distance": distance,
                 "timestamp": datetime.now().isoformat()
             }
@@ -257,10 +284,14 @@ class RobotController:
     async def turn_left(self, angle: int = 90, speed: int = 50) -> bool:
         """좌회전 명령"""
         try:
+            # 속도를 PWM 듀티로 변환
+            pwm_duty = self._speed_to_pwm_duty(speed)
+            
             command = {
                 "type": MovementType.TURN_LEFT.value,
                 "angle": angle,
                 "speed": speed,
+                "pwm_duty": pwm_duty,  # PWM 듀티 추가
                 "timestamp": datetime.now().isoformat()
             }
             
@@ -281,10 +312,14 @@ class RobotController:
     async def turn_right(self, angle: int = 90, speed: int = 50) -> bool:
         """우회전 명령"""
         try:
+            # 속도를 PWM 듀티로 변환
+            pwm_duty = self._speed_to_pwm_duty(speed)
+            
             command = {
                 "type": MovementType.TURN_RIGHT.value,
                 "angle": angle,
                 "speed": speed,
+                "pwm_duty": pwm_duty,  # PWM 듀티 추가
                 "timestamp": datetime.now().isoformat()
             }
             
@@ -305,10 +340,14 @@ class RobotController:
     async def spin(self, rotations: int = 1, speed: int = 50) -> bool:
         """빙글빙글 명령"""
         try:
+            # 속도를 PWM 듀티로 변환
+            pwm_duty = self._speed_to_pwm_duty(speed)
+            
             command = {
                 "type": MovementType.SPIN.value,
                 "rotations": rotations,
                 "speed": speed,
+                "pwm_duty": pwm_duty,  # PWM 듀티 추가
                 "timestamp": datetime.now().isoformat()
             }
             

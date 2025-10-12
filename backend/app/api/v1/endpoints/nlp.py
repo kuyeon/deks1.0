@@ -53,24 +53,86 @@ class SupportedCommandsResponse(BaseModel):
 # 명령어 패턴 정의
 COMMAND_PATTERNS = {
     "move_forward": {
-        "patterns": ["앞으로", "전진", "가줘", "이동해", "앞으로 가", "앞으로 가줘", "전진해"],
+        "patterns": ["앞으로", "전진", "가줘", "이동해", "앞으로 가", "앞으로 가줘", "전진해", "가자", "직진"],
         "description": "로봇을 앞으로 이동시킵니다"
     },
+    "move_backward": {
+        "patterns": ["뒤로", "후진", "뒤로 가", "뒤로 가줘", "후진해"],
+        "description": "로봇을 뒤로 이동시킵니다"
+    },
     "turn_left": {
-        "patterns": ["왼쪽", "좌회전", "왼쪽으로", "왼쪽으로 돌아", "왼쪽으로 돌아줘"],
+        "patterns": ["왼쪽", "좌회전", "왼쪽으로", "왼쪽으로 돌아", "왼쪽으로 돌아줘", "좌회전해"],
         "description": "로봇을 왼쪽으로 회전시킵니다"
     },
     "turn_right": {
-        "patterns": ["오른쪽", "우회전", "오른쪽으로", "오른쪽으로 돌아", "오른쪽으로 돌아줘"],
+        "patterns": ["오른쪽", "우회전", "오른쪽으로", "오른쪽으로 돌아", "오른쪽으로 돌아줘", "우회전해"],
         "description": "로봇을 오른쪽으로 회전시킵니다"
     },
     "stop": {
-        "patterns": ["정지", "멈춰", "그만", "정지해", "멈춰줘", "정지해줘"],
+        "patterns": ["정지", "멈춰", "그만", "정지해", "멈춰줘", "정지해줘", "스톱"],
         "description": "로봇을 정지시킵니다"
     },
     "spin": {
-        "patterns": ["빙글빙글", "돌아", "회전해", "빙글빙글 돌아", "빙글빙글 돌아줘"],
+        "patterns": ["빙글빙글", "돌아", "회전해", "빙글빙글 돌아", "빙글빙글 돌아줘", "제자리 회전"],
         "description": "로봇을 제자리에서 회전시킵니다"
+    }
+}
+
+# 속도 수식어 패턴 정의
+SPEED_MODIFIERS = {
+    "very_fast": {
+        "patterns": ["아주 빨리", "매우 빨리", "엄청 빨리", "굉장히 빨리", "최대한 빨리"],
+        "speed": 100,
+        "description": "매우 빠른 속도"
+    },
+    "fast": {
+        "patterns": ["빨리", "빠르게", "빠른", "급하게", "서둘러"],
+        "speed": 90,
+        "description": "빠른 속도"
+    },
+    "normal": {
+        "patterns": ["보통", "적당히", "일반", "평범하게"],
+        "speed": 50,
+        "description": "보통 속도"
+    },
+    "slow": {
+        "patterns": ["천천히", "느리게", "느린", "조심스럽게", "살살"],
+        "speed": 25,
+        "description": "느린 속도"
+    },
+    "very_slow": {
+        "patterns": ["아주 천천히", "매우 천천히", "엄청 천천히", "굉장히 천천히"],
+        "speed": 12,
+        "description": "매우 느린 속도"
+    }
+}
+
+# 거리 수식어 패턴 정의
+DISTANCE_MODIFIERS = {
+    "very_long": {
+        "patterns": ["아주 멀리", "매우 멀리", "엄청 멀리", "오래"],
+        "distance": 200,
+        "description": "매우 긴 거리"
+    },
+    "long": {
+        "patterns": ["멀리", "길게"],
+        "distance": 150,
+        "description": "긴 거리"
+    },
+    "normal": {
+        "patterns": ["조금", "적당히", "보통"],
+        "distance": 100,
+        "description": "보통 거리"
+    },
+    "short": {
+        "patterns": ["짧게", "살짝", "약간"],
+        "distance": 50,
+        "description": "짧은 거리"
+    },
+    "very_short": {
+        "patterns": ["아주 짧게", "매우 짧게"],
+        "distance": 30,
+        "description": "매우 짧은 거리"
     }
 }
 
@@ -78,6 +140,7 @@ COMMAND_PATTERNS = {
 def parse_natural_language_command(message: str) -> dict:
     """
     자연어 명령을 파싱하여 로봇 제어 명령으로 변환합니다.
+    속도와 거리 수식어를 인식합니다.
     
     Args:
         message: 사용자 입력 메시지
@@ -87,41 +150,97 @@ def parse_natural_language_command(message: str) -> dict:
     """
     message_lower = message.lower().strip()
     
+    # 속도 수식어 감지
+    detected_speed = 50  # 기본 속도
+    speed_modifier_name = "normal"
+    for modifier_name, modifier_info in SPEED_MODIFIERS.items():
+        for pattern in modifier_info["patterns"]:
+            if pattern in message_lower:
+                detected_speed = modifier_info["speed"]
+                speed_modifier_name = modifier_name
+                break
+        if speed_modifier_name != "normal" and detected_speed != 50:
+            break
+    
+    # 거리 수식어 감지
+    detected_distance = 100  # 기본 거리
+    distance_modifier_name = "normal"
+    for modifier_name, modifier_info in DISTANCE_MODIFIERS.items():
+        for pattern in modifier_info["patterns"]:
+            if pattern in message_lower:
+                detected_distance = modifier_info["distance"]
+                distance_modifier_name = modifier_name
+                break
+        if distance_modifier_name != "normal" and detected_distance != 100:
+            break
+    
     # 각 명령 패턴과 매칭 확인
     for action, pattern_info in COMMAND_PATTERNS.items():
         for pattern in pattern_info["patterns"]:
             if pattern in message_lower:
-                # 기본 매개변수 설정
+                # 기본 매개변수 설정 (속도 및 거리 수식어 적용)
                 parameters = {}
                 
                 if action == "move_forward":
-                    parameters = {"speed": 50, "distance": 100}
+                    parameters = {
+                        "speed": detected_speed,
+                        "distance": detected_distance
+                    }
+                elif action == "move_backward":
+                    parameters = {
+                        "speed": detected_speed,
+                        "distance": detected_distance
+                    }
                 elif action in ["turn_left", "turn_right"]:
-                    parameters = {"angle": 90, "speed": 30}
+                    parameters = {
+                        "angle": 90,
+                        "speed": detected_speed
+                    }
                 elif action == "spin":
-                    parameters = {"speed": 40}
+                    parameters = {
+                        "speed": detected_speed,
+                        "rotations": 1
+                    }
                 
-                # 응답 메시지 생성
+                # 응답 메시지 생성 (속도 수식어 반영)
+                speed_description = ""
+                if speed_modifier_name == "very_fast":
+                    speed_description = "아주 빠르게 "
+                elif speed_modifier_name == "fast":
+                    speed_description = "빠르게 "
+                elif speed_modifier_name == "slow":
+                    speed_description = "천천히 "
+                elif speed_modifier_name == "very_slow":
+                    speed_description = "아주 천천히 "
+                
                 response_messages = {
-                    "move_forward": "앞으로 이동합니다!",
-                    "turn_left": "왼쪽으로 회전합니다!",
-                    "turn_right": "오른쪽으로 회전합니다!",
+                    "move_forward": f"{speed_description}앞으로 이동합니다!",
+                    "move_backward": f"{speed_description}뒤로 이동합니다!",
+                    "turn_left": f"{speed_description}왼쪽으로 회전합니다!",
+                    "turn_right": f"{speed_description}오른쪽으로 회전합니다!",
                     "stop": "정지합니다!",
-                    "spin": "빙글빙글 돌아갑니다!"
+                    "spin": f"{speed_description}빙글빙글 돌아갑니다!"
                 }
                 
                 return {
                     "action": action,
                     "confidence": 0.95,
                     "response": response_messages[action],
-                    "parameters": parameters
+                    "parameters": parameters,
+                    "modifiers": {
+                        "speed": speed_modifier_name,
+                        "distance": distance_modifier_name,
+                        "speed_value": detected_speed,
+                        "distance_value": detected_distance
+                    }
                 }
     
     return {
         "action": None,
         "confidence": 0.0,
         "response": None,
-        "parameters": None
+        "parameters": None,
+        "modifiers": None
     }
 
 
@@ -153,19 +272,27 @@ async def parse_command(request: ParseCommandRequest):
                         parameters.get("speed", 50),
                         parameters.get("distance", 100)
                     )
+                elif action == "move_backward":
+                    command_success = await robot_controller.move_backward(
+                        parameters.get("speed", 50),
+                        parameters.get("distance", 100)
+                    )
                 elif action == "turn_left":
                     command_success = await robot_controller.turn_left(
-                        parameters.get("angle", 90)
+                        parameters.get("angle", 90),
+                        parameters.get("speed", 50)
                     )
                 elif action == "turn_right":
                     command_success = await robot_controller.turn_right(
-                        parameters.get("angle", 90)
+                        parameters.get("angle", 90),
+                        parameters.get("speed", 50)
                     )
                 elif action == "stop":
                     command_success = await robot_controller.stop()
                 elif action == "spin":
                     command_success = await robot_controller.spin(
-                        parameters.get("rotations", 1)
+                        parameters.get("rotations", 1),
+                        parameters.get("speed", 50)
                     )
                 
                 if not command_success:

@@ -22,18 +22,18 @@ SERVER_CONFIG = {
 # GPIO 핀 설정
 GPIO_CONFIG = {
     # 모터 제어 (L298N)
-    "motor_left_in1": 4,
-    "motor_left_in2": 5,
-    "motor_left_enable": 6,
-    "motor_right_in1": 2,
-    "motor_right_in2": 3,
-    "motor_right_enable": 7,
+    "motor_left_in1": 2,
+    "motor_left_in2": 3,
+    "motor_left_enable": 7,
+    "motor_right_in1": 4,
+    "motor_right_in2": 5,
+    "motor_right_enable": 6,
     
     # 엔코더
-    "encoder_left_a": 18,
-    "encoder_left_b": 17,
-    "encoder_right_a": 8,
-    "encoder_right_b": 9,
+    "encoder_left_a": 8,
+    "encoder_left_b": 9,
+    "encoder_right_a": 18,
+    "encoder_right_b": 17,
     
     # 센서
     "sensor_drop": 10,       # 낙하 방지 센서
@@ -67,9 +67,11 @@ GPIO_CONFIG = {
 MOTOR_CONFIG = {
     "pwm_frequency": 1000,           # PWM 주파수 (Hz)
     "max_speed": 100,                # 최대 속도 (-100 ~ 100)
-    "min_speed": 10,                 # 최소 동작 속도
+    "min_speed": 0,                  # 최소 속도 (0 허용, 서버에서 변환)
     "acceleration": 5,               # 가속도 (속도 변화량)
-    "encoder_resolution": 20         # 엔코더 해상도 (펄스/회전)
+    "encoder_resolution": 20,        # 엔코더 해상도 (펄스/회전)
+    "min_pwm_duty": 460,             # 최소 PWM 듀티 (모터 작동 최소값)
+    "max_pwm_duty": 1023             # 최대 PWM 듀티 (10비트)
 }
 
 # 센서 설정
